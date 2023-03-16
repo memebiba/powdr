@@ -14,6 +14,17 @@ lazy_static = "^1.4.0"
 mktemp = "0.5.0"
 num-bigint = "^0.4"
 regex = "^1.7.0"
+polyexen = { git = "https://github.com/Dhole/polyexen", rev="c4864d2debf9ae21138c9d67a99c93c3362df19b"}
+halo2_proofs = "0.2"
+prettytable = "0.10.0"
+num-traits = "0.2.15"
+num-integer = "0.1.45"
 
 [build-dependencies]
 lalrpop = "^0.19"
+
+[patch."https://github.com/privacy-scaling-explorations/halo2.git"]
+halo2_proofs = { git ="https://github.com/ed255/halo2", rev = "63e969673de83a410f21553fabec8f4b35bda1a5" }
+
+[patch.crates-io]
+halo2_proofs = { git ="https://github.com/ed255/halo2", rev = "63e969673de83a410f21553fabec8f4b35bda1a5" }

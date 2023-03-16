@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
-use powdr::compiler::no_callback;
 use powdr::number::AbstractNumberType;
+use powdr::{compiler::no_callback, halo2};
 use std::{fs, path::Path};
 
 #[derive(Parser)]
@@ -86,6 +86,20 @@ enum Commands {
         #[arg(short, long)]
         #[arg(default_value_t = false)]
         force: bool,
+
+        /// Verbose output (provides a full execution trace).
+        #[arg(short, long)]
+        #[arg(default_value_t = false)]
+        verbose: bool,
+    },
+
+    Halo2MockProver {
+        /// Input file
+        file: String,
+
+        /// Comma-separated list of free inputs (numbers).
+        #[arg(short, long)]
+        inputs: String,
 
         /// Verbose output (provides a full execution trace).
         #[arg(short, long)]
@@ -190,6 +204,20 @@ fn main() {
                 no_callback(),
                 verbose,
             );
+        }
+        Commands::Halo2MockProver {
+            file,
+            inputs,
+            verbose,
+        } => {
+            let inputs = inputs
+                .split(',')
+                .map(|x| x.trim())
+                .filter(|x| !x.is_empty())
+                .map(|x| x.parse().unwrap())
+                .collect::<Vec<AbstractNumberType>>();
+
+            halo2::mock_prove_asm(&file, &inputs, verbose);
         }
     }
 }
