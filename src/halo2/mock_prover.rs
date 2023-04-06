@@ -14,9 +14,6 @@ use halo2_proofs::{dev::MockProver, halo2curves::bn256::Fr};
 //const MAX_PUBLIC_INPUTS: usize = 12;
 
 pub fn mock_prove_asm(file_name: &str, inputs: &[AbstractNumberType], verbose: bool) {
-    // set field to BN254
-    crate::number::set_field_mod(polyexen::expr::get_field_p::<Fr>().to_bigint().unwrap());
-
     // read and compile PIL.
 
     let contents = fs::read_to_string(file_name).unwrap();
@@ -25,7 +22,14 @@ pub fn mock_prove_asm(file_name: &str, inputs: &[AbstractNumberType], verbose: b
         err.output_to_stderr();
         panic!();
     });
-    let analyzed = &analyzer::analyze_string(&format!("{pil}"));
+    let analyzed = analyzer::analyze_string(&format!("{pil}"));
+
+    mock_prove(analyzed, inputs, verbose);
+}
+
+pub fn mock_prove(analyzed: analyzer::Analyzed, inputs: &[AbstractNumberType], verbose: bool) {
+    // set field to BN254
+    crate::number::set_field_mod(polyexen::expr::get_field_p::<Fr>().to_bigint().unwrap());
 
     // define how query information is retrieved.
 
@@ -58,7 +62,7 @@ pub fn mock_prove_asm(file_name: &str, inputs: &[AbstractNumberType], verbose: b
     };
 
     let circuit = analyzed_to_circuit(
-        analyzed,
+        &analyzed,
         Some(query_callback),
         polyexen::expr::get_field_p::<Fr>(),
         verbose,
@@ -100,13 +104,22 @@ pub fn mock_prove_asm(file_name: &str, inputs: &[AbstractNumberType], verbose: b
 
 #[cfg(test)]
 mod test {
+    use crate::analyzer;
     use num_bigint::BigInt;
+
+    #[test]
+    fn simple_pil_halo2() {
+        let content = "namespace Global(8); pol fixed z = [0]*; pol witness a; a = 0;";
+        let analyzed = analyzer::analyze_string(content);
+        super::mock_prove(analyzed, &vec![], true);
+    }
 
     #[test]
     fn fibonacci() {
         let inputs = [165, 5, 11, 22, 33, 44, 55].map(BigInt::from);
         super::mock_prove_asm("tests/asm_data/simple_sum.asm", &inputs, false);
     }
+
     #[test]
     fn palindrome() {
         let inputs = [3, 11, 22, 11].map(BigInt::from);
