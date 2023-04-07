@@ -93,6 +93,9 @@ enum Commands {
         verbose: bool,
     },
 
+    /// Apply the Halo2 workflow on an input file and prover values.
+    /// That means parsing, analysis, witness generation,
+    /// and Halo2 mock proving.
     Halo2MockProver {
         /// Input file
         file: String,

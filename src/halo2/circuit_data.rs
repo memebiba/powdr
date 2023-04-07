@@ -5,8 +5,6 @@ use std::collections::HashMap;
 use crate::number::AbstractNumberType;
 use num_bigint::BigInt;
 use polyexen::expr::{Column, ColumnKind};
-use prettytable::Cell as PCell;
-use prettytable::{Row, Table};
 
 pub(crate) struct CircuitData<'a> {
     pub(crate) fixed: Vec<(&'a str, Vec<AbstractNumberType>)>,
@@ -108,43 +106,5 @@ impl<'a> CircuitData<'a> {
         };
         self.columns.insert(name.to_string(), column);
         column
-    }
-
-    #[allow(unused)]
-    pub fn printstd(&self, cols: Option<&[&str]>) {
-        let mut data: HashMap<_, _> = self
-            .fixed
-            .iter()
-            .chain(self.witness.iter())
-            .cloned()
-            .collect();
-        if let Some(cols) = cols {
-            data.retain(|name, _| cols.contains(name));
-        };
-
-        let mut table = Table::new();
-        let header_n = std::iter::once(PCell::new(""));
-        let header_rest = data.keys().map(|name| PCell::new(name));
-        let headers = header_n.chain(header_rest).collect();
-        table.add_row(Row::new(headers));
-
-        let trim = |s: &str| {
-            if s.len() > 5 {
-                format!("{}…", &s[..5])
-            } else {
-                s.to_string()
-            }
-        };
-
-        for row in 0..self.len() {
-            let value_n = std::iter::once(PCell::new(&row.to_string()));
-            let value_rest = data
-                .values()
-                .map(|d| PCell::new(&trim(&d.get(row).unwrap().to_string())));
-            let values = value_n.chain(value_rest).collect();
-            table.add_row(Row::new(values));
-        }
-
-        table.printstd();
     }
 }
