@@ -217,7 +217,7 @@ instr xor Y, Z -> X {
 }
 
 pil{
-	macro is_nonzero(X) { X / X }; // 0 / 0 == 0 makes this work...
+	macro is_nonzero(X) { X / X };
 	macro is_zero(X) { 1 - is_nonzero(X) };
 
 	col fixed binary_RESET(i) { is_zero((i % 4) - 3) };
