@@ -20,7 +20,6 @@ use pil_analyzer::pil_analyzer::inline_intermediate_polynomials;
 
 use crate::prover_builder::{prover_builder_cpp, prover_builder_hpp};
 use crate::verifier_builder::{verifier_builder_cpp, verifier_builder_hpp};
-use crate::FILE_NAME;
 use crate::{
     composer_builder::{composer_builder_cpp, composer_builder_hpp},
     flavor_builder,
@@ -178,8 +177,9 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     analyzed: &Analyzed<F>,
     fixed: &[(&str, Vec<F>)],
     witness: &[(&str, Vec<F>)],
+    bname: Option<String>,
 ) -> BBFiles {
-    let file_name: &str = FILE_NAME;
+    let file_name: &str = &bname.unwrap_or("Example".to_owned());
 
     let mut bb_files = BBFiles::default(file_name.to_owned());
 
