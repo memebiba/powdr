@@ -262,13 +262,7 @@ fn compile<T: FieldElement, Q: QueryCallback<T>>(
         let factory = backend.factory::<T>();
         let backend = factory.create(degree);
 
-        backend.prove(
-            &mut_analyzed,
-            &constants,
-            &witness_in_powdr_form,
-            None,
-            bname,
-        );
+        backend.prove(&mut_analyzed, &constants, &witness_in_powdr_form, None);
     }
 
     let constants = constants
