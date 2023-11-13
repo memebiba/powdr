@@ -50,7 +50,6 @@ fn trace_hpp_includes(name: &str) -> String {
     #include \"barretenberg/proof_system/arithmetization/arithmetization.hpp\"
     #include \"barretenberg/proof_system/circuit_builder/circuit_builder_base.hpp\"
     
-    #include \"./{name}_trace.cpp\"
     #include \"barretenberg/honk/flavor/generated/{name}_flavor.hpp\"
     #include \"barretenberg/proof_system/arithmetization/generated/{name}_arith.hpp\"
     #include \"barretenberg/proof_system/relations/generated/{name}.hpp\"
@@ -174,11 +173,7 @@ class {name}TraceBuilder {{
         static constexpr size_t num_polys = {num_polys};
         std::vector<Row> rows;
 
-
-        [[maybe_unused]] void build_circuit() {{
-            rows = read_both_file_into_cols(\"../commits.bin\", \"../constants.bin\");
-        }}
-
+        [[maybe_unused]] void build_circuit();
 
         AllPolynomials compute_polynomials() {{
             const auto num_rows = get_circuit_subgroup_size();
@@ -199,9 +194,6 @@ class {name}TraceBuilder {{
         }}
 
         [[maybe_unused]] bool check_circuit() {{
-            // Get the rows from file
-            build_circuit();
-
             auto polys = compute_polynomials();
             const size_t num_rows = polys[0].size();
 

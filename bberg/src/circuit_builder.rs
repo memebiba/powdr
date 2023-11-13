@@ -20,6 +20,7 @@ use pil_analyzer::pil_analyzer::inline_intermediate_polynomials;
 
 use crate::prover_builder::{prover_builder_cpp, prover_builder_hpp};
 use crate::verifier_builder::{verifier_builder_cpp, verifier_builder_hpp};
+use crate::FILE_NAME;
 use crate::{
     composer_builder::{composer_builder_cpp, composer_builder_hpp},
     flavor_builder,
@@ -32,7 +33,6 @@ pub struct BBFiles {
     pub flavor_hpp: Option<String>,
     // trace
     pub trace_hpp: Option<String>,
-    pub trace_cpp: Option<String>,
     // composer
     pub composer_cpp: Option<String>,
     pub composer_hpp: Option<String>,
@@ -85,7 +85,6 @@ impl BBFiles {
             arith_hpp: None,
             flavor_hpp: None,
             trace_hpp: None,
-            trace_cpp: None,
             composer_cpp: None,
             composer_hpp: None,
             prover_cpp: None,
@@ -108,7 +107,6 @@ impl BBFiles {
         relation_hpp: String,
         arith_hpp: String,
         trace_hpp: String,
-        trace_cpp: String,
         flavor_hpp: String,
         composer_cpp: String,
         composer_hpp: String,
@@ -124,7 +122,6 @@ impl BBFiles {
         self.composer_hpp = Some(composer_hpp);
 
         self.trace_hpp = Some(trace_hpp);
-        self.trace_cpp = Some(trace_cpp);
 
         self.verifier_cpp = Some(verifier_cpp);
         self.verifier_hpp = Some(verifier_hpp);
@@ -149,7 +146,6 @@ impl BBFiles {
 
         // Trace
         write_file!(self.trace, "_trace.hpp", self.trace_hpp);
-        write_file!(self.trace, "_trace.cpp", self.trace_cpp);
 
         write_file!(self.flavor, "_flavor.hpp", self.flavor_hpp);
 
@@ -183,7 +179,8 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     fixed: &[(&str, Vec<F>)],
     witness: &[(&str, Vec<F>)],
 ) -> BBFiles {
-    let file_name: &str = "Fib";
+    let file_name: &str = FILE_NAME;
+
     let mut bb_files = BBFiles::default(file_name.to_owned());
 
     // Collect all column names and determine if they need a shift or not
@@ -198,23 +195,27 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
         .map(|(name, _)| (*name).to_owned())
         .collect::<Vec<_>>();
 
+    println!("Fixed: {:?}", fixed_names);
+    println!("Witness: {:?}", witness_names);
     let first_col = fixed
         .iter()
         .find(|col_name| col_name.0.contains("FIRST"))
         .expect("PIL file must contain a fixed column named FIRST")
-        .0;
+        .0
+        .replace(".", "_");
 
     let last_col = fixed
         .iter()
         .find(|col_name| col_name.0.contains("LAST"))
         .expect("PIL file must contain a fixed column named LAST")
-        .0;
+        .0
+        .replace(".", "_");
 
     // Inlining step to remove the intermediate poly definitions
     let analyzed_identities = inline_intermediate_polynomials(analyzed);
 
     let (subrelations, identities, mut collected_shifts) =
-        create_identities(first_col, last_col, &analyzed_identities);
+        create_identities(&first_col, &last_col, &analyzed_identities);
     let shifted_polys: Vec<String> = collected_shifts.drain().collect_vec();
     dbg!(shifted_polys.clone());
 
@@ -237,8 +238,6 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     let arith_hpp = create_arith_boilerplate_file(file_name, num_cols);
 
     // ----------------------- Create the read from powdr columns file -----------------------
-    let trace_cpp =
-        bb_files.create_trace_builder_cpp(file_name, &fixed_names, &witness_names, &to_be_shifted);
     let trace_hpp = bb_files.create_trace_builder_hpp(file_name, &all_cols, &to_be_shifted);
 
     // ----------------------- Create the flavor file -----------------------
@@ -266,7 +265,6 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
         relation_hpp,
         arith_hpp,
         trace_hpp,
-        trace_cpp,
         flavor_hpp,
         composer_cpp,
         composer_hpp,
