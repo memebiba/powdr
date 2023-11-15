@@ -9,28 +9,6 @@ pub trait TraceBuilder {
     ) -> String;
 }
 
-fn trace_cpp_includes(relation_path: &str, name: &str) -> String {
-    let boilerplate = r#"
-#include "barretenberg/ecc/curves/bn254/fr.hpp"
-#include <cstdint>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <sys/types.h>
-#include <vector>
-#include "barretenberg/proof_system/arithmetization/arithmetization.hpp"
-"#
-    .to_owned();
-
-    format!(
-        "
-{boilerplate}
-#include \"barretenberg/{relation_path}/{name}.hpp\"
-#include \"barretenberg/proof_system/arithmetization/generated/{name}_arith.hpp\"
-"
-    )
-}
-
 fn trace_hpp_includes(name: &str) -> String {
     format!(
         "
