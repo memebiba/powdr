@@ -206,15 +206,12 @@ fn create_subrelation(
     // \\\
     let id = &identity.1;
 
-    // TODO: TEMP HACK: Part of the main_FIRST hack below - to switch off constraints on the first row
-    identity.0 += 1;
     format!(
         "//Contribution {index}
     {{\n{preamble}
     
     auto tmp = {id};
     tmp *= scaling_factor;
-    tmp *= (-{first_col} + FF(1)); // Temp to switch off 
     std::get<{index}>(evals) += tmp;
 }}",
     )
@@ -321,9 +318,3 @@ pub(crate) fn create_identities<F: FieldElement>(
     // Returning both for now
     (subrelations, identities, collected_shifts)
 }
-
-//
-//    Row check_row = { .main_FIRST = 1, .main__block_enforcer_last_step = 1, .main_XIsZero = 1 };
-// rows.push_back(check_row);
-//
-//
