@@ -1,12 +1,7 @@
 use crate::file_writer::BBFiles;
 
 pub trait TraceBuilder {
-    fn create_trace_builder_hpp(
-        &mut self,
-        name: &str,
-        fixed: &[String],
-        shifted: &[String],
-    ) -> String;
+    fn create_trace_builder_hpp(&mut self, name: &str, fixed: &[String], shifted: &[String]);
 }
 
 fn trace_hpp_includes(name: &str) -> String {
@@ -35,7 +30,7 @@ impl TraceBuilder for BBFiles {
         name: &str,
         all_cols: &[String],
         to_be_shifted: &[String],
-    ) -> String {
+    ) {
         let includes = trace_hpp_includes(name);
 
         let num_polys = all_cols.len();
@@ -53,7 +48,7 @@ impl TraceBuilder for BBFiles {
             .collect::<Vec<String>>()
             .join("\n");
 
-        format!("
+        let trace_hpp = format!("
 {includes}
 
 using namespace barretenberg;
@@ -137,6 +132,7 @@ class {name}TraceBuilder {{
 
 }};
 }}
-        ")
+        ");
+        self.trace_hpp = Some(trace_hpp);
     }
 }
