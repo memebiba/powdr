@@ -26,7 +26,7 @@ impl FlavorBuilder for BBFiles {
         shifted: &[String],
         // shifted: &[String],
     ) {
-        let first_poly = &fixed[0];
+        let first_poly = &witness[0];
         let includes = flavor_includes(name, relations);
         let num_precomputed = &fixed.len();
         let num_witness = witness.len();

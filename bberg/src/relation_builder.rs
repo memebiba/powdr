@@ -184,11 +184,12 @@ fn get_cols_in_identity_macro(all_rows_and_shifts: &[String]) -> String {
 fn create_identity<T: FieldElement>(
     expression: &SelectedExpressions<Expression<T>>,
     collected_shifts: &mut HashSet<String>,
+    collected_public_identities: &mut HashSet<String>,
 ) -> Option<BBIdentity> {
     // We want to read the types of operators and then create the appropiate code
 
     if let Some(expr) = &expression.selector {
-        let x = craft_expression(expr, collected_shifts);
+        let x = craft_expression(expr, collected_shifts, collected_public_identities);
         println!("{:?}", x);
         Some(x)
     } else {
@@ -214,28 +215,24 @@ fn create_subrelation(index: usize, preamble: String, identity: &mut BBIdentity)
 
 fn craft_expression<T: FieldElement>(
     expr: &Expression<T>,
+    // TODO: maybe make state?
     collected_shifts: &mut HashSet<String>,
+    collected_public_identities: &mut HashSet<String>,
 ) -> BBIdentity {
     match expr {
         Expression::Number(n) => (1, format!("FF({})", n.to_arbitrary_integer())),
         Expression::Reference(polyref) => {
             let mut poly_name = polyref.name.replace('.', "_").to_string();
-            let mut degree = 1;
             if polyref.next {
                 // NOTE: Naive algorithm to collect all shifted polys
                 collected_shifts.insert(poly_name.clone());
-
                 poly_name = format!("{}_shift", poly_name);
-
-                // TODO(HORRIBLE): TEMP, add in a relation that turns off shifts on the last row
-                poly_name = format!("{poly_name}");
-                degree += 1;
             }
-            (degree, poly_name)
+            (1, poly_name)
         }
         Expression::BinaryOperation(lhe, op, rhe) => {
-            let (ld, lhs) = craft_expression(lhe, collected_shifts);
-            let (rd, rhs) = craft_expression(rhe, collected_shifts);
+            let (ld, lhs) = craft_expression(lhe, collected_shifts, collected_public_identities);
+            let (rd, rhs) = craft_expression(rhe, collected_shifts, collected_public_identities);
 
             // dbg!(&lhe);
             let degree = std::cmp::max(ld, rd);
@@ -261,11 +258,19 @@ fn craft_expression<T: FieldElement>(
         // }
         Expression::UnaryOperation(operator, expression) => match operator {
             AlgebraicUnaryOperator::Minus => {
-                let (d, e) = craft_expression(expression, collected_shifts);
+                let (d, e) =
+                    craft_expression(expression, collected_shifts, collected_public_identities);
                 (d, format!("-{}", e))
             }
             _ => unimplemented!("{:?}", expr),
         },
+        // TODO: for now we do nothing with calls to public identities
+        // These probably can be implemented as some form of copy, however im not sure how we are going to process these down the line
+        Expression::PublicReference(name) => {
+            // We collect them for now to warn the user what is going on
+            collected_public_identities.insert(name.clone());
+            (1, format!("FF(0)"))
+        }
 
         _ => unimplemented!("{:?}", expr),
     }
@@ -288,9 +293,16 @@ pub(crate) fn create_identities<F: FieldElement>(
         })
         .collect::<Vec<_>>();
 
+    // Temp
+    // if collected_public_identities.len() > 0 {
+    //     println!("Public Identities are not supported yet in codegen, however some were collected");
+    //     println!("Public Identities: {:?}", collected_public_identities);
+    // }
+
     let mut identities = Vec::new();
     let mut subrelations = Vec::new();
     let mut collected_shifts: HashSet<String> = HashSet::new();
+    let mut collected_public_identities: HashSet<String> = HashSet::new();
 
     for (i, expression) in expressions.iter().enumerate() {
         let relation_boilerplate = format!(
@@ -299,12 +311,23 @@ pub(crate) fn create_identities<F: FieldElement>(
         );
         // TODO: deal with unwrap
 
-        let mut identity = create_identity(expression, &mut collected_shifts).unwrap();
+        let mut identity = create_identity(
+            expression,
+            &mut collected_shifts,
+            &mut collected_public_identities,
+        )
+        .unwrap();
         let subrelation = create_subrelation(i, relation_boilerplate, &mut identity);
 
         identities.push(identity);
 
         subrelations.push(subrelation);
+    }
+
+    // Print a warning to the user about usage of public identities
+    if collected_public_identities.len() > 0 {
+        println!("Public Identities are not supported yet in codegen, however some were collected");
+        println!("Public Identities: {:?}", collected_public_identities);
     }
 
     // Returning both for now

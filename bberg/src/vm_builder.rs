@@ -123,7 +123,7 @@ fn get_all_col_names<F: FieldElement>(
         .filter(|name| !shifted.contains(name))
         .collect();
 
-    let with_shifts: Vec<String> = [fixed_names, witness_names, shifted.clone()]
+    let with_shifts: Vec<String> = [fixed_names.clone(), witness_names.clone(), shifted.clone()]
         .into_iter()
         .flatten()
         .collect();
