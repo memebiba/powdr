@@ -74,23 +74,18 @@ impl ProverBuilder for BBFiles {
         // Create the wire assignments, prover_polynomial = key
         let fixed_assignments = fixed
             .iter()
-            .map(|name| {
-                let n = name.replace('.', "_");
-                format!("prover_polynomials.{n} = key->{n};", n = n)
-            })
+            .map(|name| format!("prover_polynomials.{name} = key->{name};"))
             .collect::<Vec<_>>()
             .join("\n");
 
         let committed_assignments = to_be_shifted
             .iter()
             .map(|name| {
-                let n = name.replace('.', "_");
                 format!(
                     "
-prover_polynomials.{n} = key->{n};
-prover_polynomials.{n}_shift = key->{n}.shifted();
+prover_polynomials.{name} = key->{name};
+prover_polynomials.{name}_shift = key->{name}.shifted();
 ",
-                    n = n
                 )
             })
             .collect::<Vec<_>>()

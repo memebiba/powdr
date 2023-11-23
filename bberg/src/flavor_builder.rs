@@ -277,8 +277,7 @@ fn create_precomputed_entities(fixed: &[String]) -> String {
     let data_types = witness_get(fixed, false);
     let mut name_set = String::new();
     for name in fixed {
-        let n = name.replace('.', "_");
-        name_set.push_str(&format!("{n}, ", n = n));
+        name_set.push_str(&format!("{name}, "));
     }
 
     let pointer_view = create_pointer_view("NUM_PRECOMPUTED_ENTITIES", fixed);
@@ -299,7 +298,7 @@ fn create_precomputed_entities(fixed: &[String]) -> String {
 fn create_pointer_view(label: &str, entities: &[String]) -> String {
     let pointer_list = entities
         .iter()
-        .map(|e| format!("&{}", e.replace('.', "_")))
+        .map(|e| format!("&{e}"))
         .collect::<Vec<_>>()
         .join(", ");
 
@@ -312,13 +311,16 @@ fn create_pointer_view(label: &str, entities: &[String]) -> String {
 
 fn witness_get(witness: &[String], shift: bool) -> String {
     let mut return_string = String::new();
-    for name in witness.iter() {
-        let n = name.replace('.', "_");
-        let n = if shift { format!("{}_shift", n) } else { n };
+    for n in witness.iter() {
+        let n = if shift {
+            format!("{n}_shift")
+        } else {
+            n.to_owned()
+        };
+
         return_string.push_str(&format!(
             "
             DataType {n};",
-            n = n
         ));
     }
 
@@ -336,11 +338,9 @@ fn make_wires_set(set: &[String]) -> String {
     let mut wires = String::new();
 
     for name in set.iter() {
-        let n = name.replace('.', "_");
         wires.push_str(&format!(
-            "{n}, 
+            "{name}, 
             ",
-            n = n
         ));
     }
     wires
@@ -371,11 +371,9 @@ fn create_witness_entities(witness: &[String]) -> String {
 fn create_labels(all_ents: &[String]) -> String {
     let mut labels = String::new();
     for name in all_ents {
-        let n = name.replace('.', "_");
         labels.push_str(&format!(
-            "Base::{n} = \"{n}\"; 
+            "Base::{name} = \"{name}\"; 
             ",
-            n = n
         ));
     }
     labels
@@ -404,10 +402,7 @@ fn create_commitment_labels(all_ents: &[String]) -> String {
 fn create_key_dereference(fixed: &[String]) -> String {
     fixed
         .iter()
-        .map(|f| {
-            let name = f.replace('.', "_");
-            format!("{name} = verification_key->{name};")
-        })
+        .map(|name| format!("{name} = verification_key->{name};"))
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -436,26 +431,22 @@ fn create_verifier_commitments(fixed: &[String]) -> String {
 fn generate_transcript(witness: &[String]) -> String {
     let declarations = witness
         .iter()
-        .map(|f| format!("Commitment {};", f.replace('.', "_")))
+        .map(|f| format!("Commitment {f};"))
         .collect::<Vec<_>>()
         .join("\n");
     let deserialize_wires = witness
         .iter()
-        .map(|f| {
+        .map(|name| {
             format!(
-                "{} = deserialize_from_buffer<Commitment>(BaseTranscript<FF>::proof_data, num_bytes_read);",
-                f.replace('.', "_")
+                "{name} = deserialize_from_buffer<Commitment>(BaseTranscript<FF>::proof_data, num_bytes_read);",
             )
         })
         .collect::<Vec<_>>()
         .join("\n");
     let serialize_wires = witness
         .iter()
-        .map(|f| {
-            format!(
-                "serialize_to_buffer<Commitment>({}, BaseTranscript<FF>::proof_data);",
-                f.replace('.', "_")
-            )
+        .map(|name| {
+            format!("serialize_to_buffer<Commitment>({name}, BaseTranscript<FF>::proof_data);",)
         })
         .collect::<Vec<_>>()
         .join("\n");

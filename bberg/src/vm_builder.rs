@@ -12,6 +12,11 @@ use crate::prover_builder::ProverBuilder;
 use crate::relation_builder::{create_identities, create_row_type, RelationBuilder};
 use crate::verifier_builder::VerifierBuilder;
 
+// TODO: move to util
+fn sanitize_name(string: &String) -> String {
+    string.replace(".", "_").replace("[", "_").replace("]", "_")
+}
+
 pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     analyzed: &Analyzed<F>,
     fixed: &[(String, Vec<F>)],
@@ -22,26 +27,22 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
 
     let mut bb_files = BBFiles::default(file_name.to_owned());
 
-    // Collect all column names and determine if they need a shift or not
-
-    // TODO: currently we provide shifts for both the fixed and witness columns, in the long term we need to work out what needs a shift and what doesn't
-    let fixed_names = fixed
-        .iter()
-        .map(|(name, _)| (*name.replace(".", "_")).to_owned())
-        .collect::<Vec<_>>();
-    let witness_names = witness
-        .iter()
-        .map(|(name, _)| (*name.replace(".", "_")).to_owned())
-        .collect::<Vec<_>>();
-
     // Inlining step to remove the intermediate poly definitions
     let analyzed_identities = inline_intermediate_polynomials(analyzed);
 
     let (subrelations, identities, mut collected_shifts) = create_identities(&analyzed_identities);
     let shifted_polys: Vec<String> = collected_shifts.drain().collect_vec();
 
-    let (all_cols, unshifted, to_be_shifted, shifted, all_cols_with_shifts) =
-        get_all_col_names(fixed, witness, &shifted_polys);
+    // Collect all column names and determine if they need a shift or not
+    let (
+        fixed_names,
+        witness_names,
+        all_cols,
+        unshifted,
+        to_be_shifted,
+        shifted,
+        all_cols_with_shifts,
+    ) = get_all_col_names(fixed, witness, &shifted_polys);
 
     let row_type = create_row_type(&all_cols_with_shifts);
 
@@ -94,21 +95,17 @@ fn get_all_col_names<F: FieldElement>(
     Vec<String>,
     Vec<String>,
     Vec<String>,
+    Vec<String>,
+    Vec<String>,
 ) {
-    let fixed_names: Vec<String> = fixed
+    let fixed_names = fixed
         .iter()
-        .map(|(name, _)| {
-            let n = name.replace('.', "_");
-            n.to_owned()
-        })
-        .collect();
-    let witness_names: Vec<String> = witness
+        .map(|(name, _)| sanitize_name(name).to_owned())
+        .collect::<Vec<_>>();
+    let witness_names = witness
         .iter()
-        .map(|(name, _)| {
-            let n = name.replace('.', "_");
-            n.to_owned()
-        })
-        .collect();
+        .map(|(name, _)| sanitize_name(name).to_owned())
+        .collect::<Vec<_>>();
 
     let shifted: Vec<String> = to_be_shifted
         .iter()
@@ -132,6 +129,8 @@ fn get_all_col_names<F: FieldElement>(
         .collect();
 
     (
+        fixed_names,
+        witness_names,
         all_cols,
         unshifted,
         to_be_shifted.to_vec(),
