@@ -65,7 +65,7 @@ impl ProverBuilder for BBFiles {
     }} // namespace proof_system::honk
      
     ");
-        self.prover_hpp = Some(prover_hpp);
+        self.write_file(&self.prover, &format!("{}_prover.hpp", name), &prover_hpp);
     }
 
     fn create_prover_cpp(&mut self, name: &str, fixed: &[String], to_be_shifted: &[String]) {
@@ -224,7 +224,8 @@ prover_polynomials.{name}_shift = key->{name}.shifted();
      
     
     ");
-        self.prover_cpp = Some(prover_cpp);
+
+        self.write_file(&self.prover, &format!("{}_prover.cpp", name), &prover_cpp);
     }
 }
 

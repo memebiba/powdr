@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+
+use ast::analyzed::AlgebraicExpression as Expression;
 use ast::analyzed::Analyzed;
+use ast::analyzed::Identity;
 
 use itertools::Itertools;
 use number::FieldElement;
@@ -22,7 +26,7 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     fixed: &[(String, Vec<F>)],
     witness: &[(String, Vec<F>)],
     name: Option<String>,
-) -> BBFiles {
+) {
     let file_name: &str = &name.unwrap_or("Example".to_owned());
 
     let mut bb_files = BBFiles::default(file_name.to_owned());
@@ -30,8 +34,10 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     // Inlining step to remove the intermediate poly definitions
     let analyzed_identities = inline_intermediate_polynomials(analyzed);
 
-    let (subrelations, identities, mut collected_shifts) = create_identities(&analyzed_identities);
-    let shifted_polys: Vec<String> = collected_shifts.drain().collect_vec();
+    let per_file_identites = group_relations_per_file(&analyzed_identities);
+    // TODO: duplicated but only used to get the shifts
+    let (_, __, collected_cols, collected_shifts) = create_identities(&analyzed_identities);
+    let shifted_polys: Vec<String> = collected_shifts;
 
     // Collect all column names and determine if they need a shift or not
     let (
@@ -44,16 +50,30 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
         all_cols_with_shifts,
     ) = get_all_col_names(fixed, witness, &shifted_polys);
 
-    let row_type = create_row_type(&all_cols_with_shifts);
+    // Contains all of the rows in each relation, will be useful for creating composite builder types
+    // TODO: this will change up
+    let mut all_rows: HashMap<String, String> = HashMap::new();
+    // ----------------------- Create the relation files -----------------------
+    for (relation_name, analyzed_idents) in per_file_identites.iter() {
+        // TODO: make this more granular instead of doing everything at once
+        let (subrelations, identities, collected_polys, collected_shifts) =
+            create_identities(analyzed_idents);
 
-    // ----------------------- Create the relation file -----------------------
-    bb_files.create_relation_hpp(
-        file_name,
-        &subrelations,
-        &identities,
-        &row_type,
-        &all_cols_with_shifts,
-    );
+        let all_cols_with_shifts = combine_cols(collected_polys, collected_shifts);
+        // TODO: This can probably be moved into the create_identities function
+        let row_type = create_row_type(relation_name, &all_cols_with_shifts);
+
+        all_rows.insert(relation_name.clone(), row_type.clone());
+
+        bb_files.create_relations(
+            file_name,
+            relation_name,
+            &subrelations,
+            &identities,
+            &row_type,
+            &all_cols_with_shifts,
+        );
+    }
 
     // ----------------------- Create the circuit builder file -----------------------
     bb_files.create_circuit_builder_hpp(file_name, &all_cols, &to_be_shifted);
@@ -61,7 +81,6 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     // ----------------------- Create the flavor file -----------------------
     bb_files.create_flavor_hpp(
         file_name,
-        &subrelations,
         &fixed_names,
         &witness_names,
         &all_cols,
@@ -81,8 +100,29 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     // ----------------------- Create the Prover files -----------------------
     bb_files.create_prover_cpp(file_name, &unshifted, &to_be_shifted);
     bb_files.create_prover_hpp(file_name);
+}
 
-    bb_files
+fn combine_cols(collected_polys: Vec<String>, collected_shifts: Vec<String>) -> Vec<String> {
+    let all_cols_with_shifts = collected_polys
+        .iter()
+        .map(|name| sanitize_name(name).to_owned())
+        .chain(
+            collected_shifts
+                .iter()
+                .map(|name| format!("{}", sanitize_name(name).to_owned()))
+                .collect::<Vec<_>>(),
+        )
+        .collect_vec();
+    all_cols_with_shifts
+}
+
+fn group_relations_per_file<F: FieldElement>(
+    identities: &Vec<Identity<Expression<F>>>,
+) -> HashMap<String, Vec<Identity<Expression<F>>>> {
+    identities
+        .iter()
+        .map(|identity| identity.clone())
+        .into_group_map_by(|identity| identity.source.file.clone().replace(".pil", ""))
 }
 
 fn get_all_col_names<F: FieldElement>(

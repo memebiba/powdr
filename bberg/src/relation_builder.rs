@@ -11,8 +11,9 @@ use number::{DegreeType, FieldElement};
 use crate::file_writer::BBFiles;
 
 pub trait RelationBuilder {
-    fn create_relation_hpp(
-        &mut self,
+    fn create_relations(
+        &self,
+        root_name: &str,
         name: &str,
         sub_relations: &[String],
         identities: &[BBIdentity],
@@ -25,8 +26,9 @@ pub trait RelationBuilder {
 type BBIdentity = (DegreeType, String);
 
 impl RelationBuilder for BBFiles {
-    fn create_relation_hpp(
-        &mut self,
+    fn create_relations(
+        &self,
+        root_name: &str,
         name: &str,
         sub_relations: &[String],
         identities: &[BBIdentity],
@@ -53,7 +55,12 @@ namespace proof_system::{name}_vm {{
 
         }}"
         );
-        self.relation_hpp = Some(relations);
+
+        self.write_file(
+            &format!("{}/{}", &self.rel, root_name),
+            &format!("{}.hpp", name),
+            &relations,
+        );
     }
 }
 
@@ -146,11 +153,11 @@ fn create_row_type_items(names: &[String]) -> Vec<String> {
 }
 
 // Each vm will need to have a row which is a combination of all of the witness columns
-pub(crate) fn create_row_type(all_rows: &[String]) -> String {
+pub(crate) fn create_row_type(name: &str, all_rows: &[String]) -> String {
     let all_annotated = create_row_type_items(all_rows);
 
     let row_type = format!(
-        "template <typename FF> struct Row {{ \n{}\n }}",
+        "template <typename FF> struct {name}Row {{ \n{}\n }}",
         all_annotated.join("\n"),
     );
 
@@ -183,13 +190,13 @@ fn get_cols_in_identity_macro(all_rows_and_shifts: &[String]) -> String {
 
 fn create_identity<T: FieldElement>(
     expression: &SelectedExpressions<Expression<T>>,
-    collected_shifts: &mut HashSet<String>,
+    collected_cols: &mut HashSet<String>,
     collected_public_identities: &mut HashSet<String>,
 ) -> Option<BBIdentity> {
     // We want to read the types of operators and then create the appropiate code
 
     if let Some(expr) = &expression.selector {
-        let x = craft_expression(expr, collected_shifts, collected_public_identities);
+        let x = craft_expression(expr, collected_cols, collected_public_identities);
         println!("{:?}", x);
         Some(x)
     } else {
@@ -216,7 +223,7 @@ fn create_subrelation(index: usize, preamble: String, identity: &mut BBIdentity)
 fn craft_expression<T: FieldElement>(
     expr: &Expression<T>,
     // TODO: maybe make state?
-    collected_shifts: &mut HashSet<String>,
+    collected_cols: &mut HashSet<String>,
     collected_public_identities: &mut HashSet<String>,
 ) -> BBIdentity {
     match expr {
@@ -225,14 +232,14 @@ fn craft_expression<T: FieldElement>(
             let mut poly_name = polyref.name.replace('.', "_").to_string();
             if polyref.next {
                 // NOTE: Naive algorithm to collect all shifted polys
-                collected_shifts.insert(poly_name.clone());
                 poly_name = format!("{}_shift", poly_name);
             }
+            collected_cols.insert(poly_name.clone());
             (1, poly_name)
         }
         Expression::BinaryOperation(lhe, op, rhe) => {
-            let (ld, lhs) = craft_expression(lhe, collected_shifts, collected_public_identities);
-            let (rd, rhs) = craft_expression(rhe, collected_shifts, collected_public_identities);
+            let (ld, lhs) = craft_expression(lhe, collected_cols, collected_public_identities);
+            let (rd, rhs) = craft_expression(rhe, collected_cols, collected_public_identities);
 
             // dbg!(&lhe);
             let degree = std::cmp::max(ld, rd);
@@ -259,7 +266,7 @@ fn craft_expression<T: FieldElement>(
         Expression::UnaryOperation(operator, expression) => match operator {
             AlgebraicUnaryOperator::Minus => {
                 let (d, e) =
-                    craft_expression(expression, collected_shifts, collected_public_identities);
+                    craft_expression(expression, collected_cols, collected_public_identities);
                 (d, format!("-{}", e))
             }
             _ => unimplemented!("{:?}", expr),
@@ -279,7 +286,7 @@ fn craft_expression<T: FieldElement>(
 /// Todo, eventually these will need to be siloed based on the file name they are in
 pub(crate) fn create_identities<F: FieldElement>(
     identities: &Vec<Identity<Expression<F>>>,
-) -> (Vec<String>, Vec<BBIdentity>, HashSet<String>) {
+) -> (Vec<String>, Vec<BBIdentity>, Vec<String>, Vec<String>) {
     // We only want the expressions for now
     // When we have a poly type, we only need the left side of it
     let expressions = identities
@@ -301,7 +308,7 @@ pub(crate) fn create_identities<F: FieldElement>(
 
     let mut identities = Vec::new();
     let mut subrelations = Vec::new();
-    let mut collected_shifts: HashSet<String> = HashSet::new();
+    let mut collected_cols: HashSet<String> = HashSet::new();
     let mut collected_public_identities: HashSet<String> = HashSet::new();
 
     for (i, expression) in expressions.iter().enumerate() {
@@ -311,9 +318,10 @@ pub(crate) fn create_identities<F: FieldElement>(
         );
         // TODO: deal with unwrap
 
+        // TODO: collected pattern is shit
         let mut identity = create_identity(
             expression,
-            &mut collected_shifts,
+            &mut collected_cols,
             &mut collected_public_identities,
         )
         .unwrap();
@@ -330,6 +338,19 @@ pub(crate) fn create_identities<F: FieldElement>(
         println!("Public Identities: {:?}", collected_public_identities);
     }
 
+    let collected_cols: Vec<String> = collected_cols.drain().collect();
+    let collected_shifts: Vec<String> = collected_cols
+        .clone()
+        .iter()
+        .filter_map(|col| {
+            if col.ends_with("shift") {
+                Some(col.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+
     // Returning both for now
-    (subrelations, identities, collected_shifts)
+    (subrelations, identities, collected_cols, collected_shifts)
 }

@@ -4,7 +4,6 @@ pub trait FlavorBuilder {
     fn create_flavor_hpp(
         &mut self,
         name: &str,
-        relations: &[String],
         fixed: &[String],
         witness: &[String],
         all_cols: &[String],
@@ -18,7 +17,6 @@ impl FlavorBuilder for BBFiles {
     fn create_flavor_hpp(
         &mut self,
         name: &str,
-        relations: &[String],
         fixed: &[String],
         witness: &[String],
         all_cols: &[String],
@@ -27,7 +25,7 @@ impl FlavorBuilder for BBFiles {
         // shifted: &[String],
     ) {
         let first_poly = &witness[0];
-        let includes = flavor_includes(name, relations);
+        let includes = flavor_includes(name);
         let num_precomputed = &fixed.len();
         let num_witness = witness.len();
         let num_all = num_witness + shifted.len() + to_be_shifted.len();
@@ -247,11 +245,12 @@ class {name}Flavor {{
     
     "
     );
-        self.flavor_hpp = Some(flavor_hpp);
+
+        self.write_file(&self.flavor, &format!("{}_flavor.hpp", name), &flavor_hpp);
     }
 }
 
-fn flavor_includes(name: &str, _relations: &[String]) -> String {
+fn flavor_includes(name: &str) -> String {
     // TODO: when there are multiple relations generated, they will need to be known in this file
 
     // TODO: Get the path for generated / other relations from self

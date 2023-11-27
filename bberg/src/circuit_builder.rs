@@ -135,6 +135,7 @@ class {name}CircuitBuilder {{
 }};
 }}
         ");
-        self.circuit_hpp = Some(circuit_hpp);
+
+        self.write_file(&self.circuit, &format!("{}.hpp", name), &circuit_hpp);
     }
 }
