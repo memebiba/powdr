@@ -18,7 +18,7 @@ use crate::verifier_builder::VerifierBuilder;
 
 // TODO: move to util
 fn sanitize_name(string: &String) -> String {
-    string.replace(".", "_").replace("[", "_").replace("]", "_")
+    string.replace(['.', '[', ']'], "_")
 }
 
 pub(crate) fn analyzed_to_cpp<F: FieldElement>(
@@ -35,9 +35,18 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     let analyzed_identities = inline_intermediate_polynomials(analyzed);
 
     let per_file_identites = group_relations_per_file(&analyzed_identities);
+    // We require all of the relation file names in order to import them into the flavor
+    let relations = per_file_identites.keys().cloned().collect_vec();
+
     // TODO: duplicated but only used to get the shifts
-    let (_, __, collected_cols, collected_shifts) = create_identities(&analyzed_identities);
-    let shifted_polys: Vec<String> = collected_shifts;
+    let (_, __, _collected_cols, collected_shifts) = create_identities(&analyzed_identities);
+
+    // TODO: hack - this can be removed with some restructuring
+    let shifted_polys: Vec<String> = collected_shifts
+        .clone()
+        .iter()
+        .map(|s| s.replace("_shift", ""))
+        .collect();
 
     // Collect all column names and determine if they need a shift or not
     let (
@@ -56,12 +65,12 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     // ----------------------- Create the relation files -----------------------
     for (relation_name, analyzed_idents) in per_file_identites.iter() {
         // TODO: make this more granular instead of doing everything at once
-        let (subrelations, identities, collected_polys, collected_shifts) =
+        let (subrelations, identities, collected_polys, _collected_shifts) =
             create_identities(analyzed_idents);
 
-        let all_cols_with_shifts = combine_cols(collected_polys, collected_shifts);
+        // let all_cols_with_shifts = combine_cols(collected_polys, collected_shifts);
         // TODO: This can probably be moved into the create_identities function
-        let row_type = create_row_type(relation_name, &all_cols_with_shifts);
+        let row_type = create_row_type(&capitalize(relation_name), &collected_polys);
 
         all_rows.insert(relation_name.clone(), row_type.clone());
 
@@ -76,17 +85,24 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     }
 
     // ----------------------- Create the circuit builder file -----------------------
-    bb_files.create_circuit_builder_hpp(file_name, &all_cols, &to_be_shifted);
+    bb_files.create_circuit_builder_hpp(
+        file_name,
+        &relations,
+        &all_cols,
+        &to_be_shifted,
+        &all_cols_with_shifts,
+    );
 
     // ----------------------- Create the flavor file -----------------------
     bb_files.create_flavor_hpp(
         file_name,
+        &relations,
         &fixed_names,
         &witness_names,
         &all_cols,
         &to_be_shifted,
         &shifted,
-        // &shifted,
+        &all_cols_with_shifts,
     );
 
     // ----------------------- Create the composer files -----------------------
@@ -109,7 +125,7 @@ fn combine_cols(collected_polys: Vec<String>, collected_shifts: Vec<String>) -> 
         .chain(
             collected_shifts
                 .iter()
-                .map(|name| format!("{}", sanitize_name(name).to_owned()))
+                .map(|name| sanitize_name(name).to_owned().to_string())
                 .collect::<Vec<_>>(),
         )
         .collect_vec();
@@ -121,7 +137,7 @@ fn group_relations_per_file<F: FieldElement>(
 ) -> HashMap<String, Vec<Identity<Expression<F>>>> {
     identities
         .iter()
-        .map(|identity| identity.clone())
+        .cloned()
         .into_group_map_by(|identity| identity.source.file.clone().replace(".pil", ""))
 }
 
@@ -177,4 +193,12 @@ fn get_all_col_names<F: FieldElement>(
         shifted,
         with_shifts,
     )
+}
+
+fn capitalize(s: &String) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
 }

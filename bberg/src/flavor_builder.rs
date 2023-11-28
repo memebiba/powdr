@@ -1,15 +1,25 @@
-use crate::file_writer::BBFiles;
+use crate::{file_writer::BBFiles, utils::get_relations_imports};
 
 pub trait FlavorBuilder {
     fn create_flavor_hpp(
         &mut self,
         name: &str,
+        relation_file_names: &[String],
         fixed: &[String],
         witness: &[String],
         all_cols: &[String],
         to_be_shifted: &[String],
         shifted: &[String],
+        all_cols_and_shifts: &[String],
     );
+}
+
+fn create_relations_tuple(master_name: &str, relation_file_names: &[String]) -> String {
+    relation_file_names
+        .iter()
+        .map(|name| format!("{master_name}_vm::{name}<FF>"))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Build the boilerplate for the flavor file
@@ -17,34 +27,37 @@ impl FlavorBuilder for BBFiles {
     fn create_flavor_hpp(
         &mut self,
         name: &str,
+        relation_file_names: &[String],
         fixed: &[String],
         witness: &[String],
         all_cols: &[String],
         to_be_shifted: &[String],
         shifted: &[String],
+        all_cols_and_shifts: &[String],
         // shifted: &[String],
     ) {
         let first_poly = &witness[0];
-        let includes = flavor_includes(name);
+        let includes = flavor_includes(name, relation_file_names);
         let num_precomputed = &fixed.len();
+        dbg!(&witness);
+        dbg!(&fixed);
+        dbg!(&to_be_shifted);
+        dbg!(&shifted);
+        dbg!(&all_cols);
         let num_witness = witness.len();
-        let num_all = num_witness + shifted.len() + to_be_shifted.len();
+        let num_all = all_cols_and_shifts.len();
         // TODO: for now we include a shift OF ALL witness wires, however this is not necessarily true
 
         let precomputed = witness_get(fixed, false);
 
         let witnesses = witness_get(witness, false);
-        let precomputed_str = create_precomputed_entities(&fixed);
-        let witness_str = create_witness_entities(&witness);
+        let precomputed_str = create_precomputed_entities(fixed);
+        let witness_str = create_witness_entities(witness);
         let all_shift = witness_get(shifted, false);
 
-        let all_cols_and_shifts = &[all_cols.to_vec(), shifted.to_vec()]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<String>>();
-        let all_entities_get_wires = make_wires_set(&all_cols_and_shifts);
+        let all_entities_get_wires = make_wires_set(all_cols_and_shifts);
         let all_entities_pointer_view =
-            create_pointer_view("NUM_ALL_ENTITIES", &all_cols_and_shifts);
+            create_pointer_view("NUM_ALL_ENTITIES", all_cols_and_shifts);
 
         let all_entities_get_unshifted = make_wires_set(all_cols);
         let all_entities_get_to_be_shifted = make_wires_set(to_be_shifted);
@@ -57,7 +70,7 @@ impl FlavorBuilder for BBFiles {
         let transcript = generate_transcript(witness);
 
         // TODO: make this work when we have multiple relation files, for now we just have the one
-        let relations_tuple = format!("{name}_vm::{name}<FF>");
+        let relations_tuple = create_relations_tuple(name, relation_file_names);
         // let relations_tuple = relations
         //     .iter()
         //     .map(|r| format!("{}Relation", r))
@@ -250,8 +263,9 @@ class {name}Flavor {{
     }
 }
 
-fn flavor_includes(name: &str) -> String {
+fn flavor_includes(name: &str, relation_file_names: &[String]) -> String {
     // TODO: when there are multiple relations generated, they will need to be known in this file
+    let relation_imports = get_relations_imports(name, relation_file_names);
 
     // TODO: Get the path for generated / other relations from self
     format!(
@@ -267,7 +281,7 @@ fn flavor_includes(name: &str) -> String {
 #include \"barretenberg/polynomials/evaluation_domain.hpp\"
 #include \"barretenberg/polynomials/polynomial.hpp\"
 #include \"barretenberg/flavor/flavor.hpp\"
-#include \"barretenberg/relations/generated/{name}.hpp\"
+{relation_imports}
 "
     )
 }

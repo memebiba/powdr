@@ -5,5 +5,6 @@ mod file_writer;
 mod flavor_builder;
 mod prover_builder;
 mod relation_builder;
+mod utils;
 mod verifier_builder;
 pub mod vm_builder;

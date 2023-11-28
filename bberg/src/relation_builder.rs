@@ -43,7 +43,7 @@ impl RelationBuilder for BBFiles {
 
         let relations = format!(
             "{includes}
-namespace proof_system::{name}_vm {{
+namespace proof_system::{root_name}_vm {{
 
 {row_type};
 
@@ -69,7 +69,7 @@ fn relation_class_boilerplate(
     sub_relations: &[String],
     identities: &[BBIdentity],
 ) -> String {
-    // TODO: MOVE ELSEWHERE: We add one to all degrees because we have an extra scaling factor
+    // We add one to all degrees because we have an extra scaling factor
     let degrees = identities.iter().map(|(d, _)| d + 1).collect();
     let degree_boilerplate = get_degree_boilerplate(degrees);
     let relation_code = get_relation_code(sub_relations);
@@ -139,8 +139,8 @@ fn get_degree_boilerplate(degrees: Vec<DegreeType>) -> String {
 fn relation_includes() -> &'static str {
     r#"
 #pragma once
-#include "../relation_parameters.hpp"
-#include "../relation_types.hpp"
+#include "../../relation_parameters.hpp"
+#include "../../relation_types.hpp"
 "#
 }
 
@@ -276,10 +276,8 @@ fn craft_expression<T: FieldElement>(
         Expression::PublicReference(name) => {
             // We collect them for now to warn the user what is going on
             collected_public_identities.insert(name.clone());
-            (1, format!("FF(0)"))
+            (1, "FF(0)".to_string())
         }
-
-        _ => unimplemented!("{:?}", expr),
     }
 }
 
@@ -333,7 +331,7 @@ pub(crate) fn create_identities<F: FieldElement>(
     }
 
     // Print a warning to the user about usage of public identities
-    if collected_public_identities.len() > 0 {
+    if !collected_public_identities.is_empty() {
         println!("Public Identities are not supported yet in codegen, however some were collected");
         println!("Public Identities: {:?}", collected_public_identities);
     }
