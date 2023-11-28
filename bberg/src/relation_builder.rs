@@ -241,7 +241,6 @@ fn craft_expression<T: FieldElement>(
             let (ld, lhs) = craft_expression(lhe, collected_cols, collected_public_identities);
             let (rd, rhs) = craft_expression(rhe, collected_cols, collected_public_identities);
 
-            // dbg!(&lhe);
             let degree = std::cmp::max(ld, rd);
             match op {
                 AlgebraicBinaryOperator::Add => (degree, format!("({} + {})", lhs, rhs)),

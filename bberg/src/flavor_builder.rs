@@ -39,11 +39,6 @@ impl FlavorBuilder for BBFiles {
         let first_poly = &witness[0];
         let includes = flavor_includes(name, relation_file_names);
         let num_precomputed = &fixed.len();
-        dbg!(&witness);
-        dbg!(&fixed);
-        dbg!(&to_be_shifted);
-        dbg!(&shifted);
-        dbg!(&all_cols);
         let num_witness = witness.len();
         let num_all = all_cols_and_shifts.len();
         // TODO: for now we include a shift OF ALL witness wires, however this is not necessarily true
