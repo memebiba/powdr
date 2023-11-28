@@ -18,8 +18,9 @@ pub trait RelationBuilder {
         sub_relations: &[String],
         identities: &[BBIdentity],
         row_type: &String,
-        all_rows_and_shifts: &[String],
     );
+
+    fn create_declare_views(&self, name: &str, all_cols_and_shifts: &[String]);
 }
 
 // TODO: MOve -> to gen code we need to know the degree of each poly
@@ -33,21 +34,16 @@ impl RelationBuilder for BBFiles {
         sub_relations: &[String],
         identities: &[BBIdentity],
         row_type: &String,
-        all_rows_and_shifts: &[String],
     ) {
         let includes = relation_includes();
         let class_boilerplate = relation_class_boilerplate(name, sub_relations, identities);
         let export = get_export(name);
-
-        let view_macro_preamble = get_cols_in_identity_macro(all_rows_and_shifts);
 
         let relations = format!(
             "{includes}
 namespace proof_system::{root_name}_vm {{
 
 {row_type};
-
-{view_macro_preamble}
 
 {class_boilerplate}
 
@@ -60,6 +56,33 @@ namespace proof_system::{root_name}_vm {{
             &format!("{}/{}", &self.rel, root_name),
             &format!("{}.hpp", name),
             &relations,
+        );
+    }
+
+    fn create_declare_views(&self, name: &str, all_cols_and_shifts: &[String]) {
+        let make_view_per_row = all_cols_and_shifts
+            .iter()
+            .map(|row_name| {
+                let name = row_name.replace('.', "_");
+                format!("[[maybe_unused]] auto {name} = View(new_term.{name});  \\")
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let declare_views = format!(
+            "
+    #define DECLARE_VIEWS(index) \
+        using View = typename std::tuple_element<index, ContainerOverSubrelations>::type; \
+        {make_view_per_row}
+
+
+    "
+        );
+
+        self.write_file(
+            &format!("{}/{name}", &self.rel),
+            &format!("declare_views.hpp"),
+            &declare_views,
         );
     }
 }
@@ -114,7 +137,7 @@ fn get_relation_code(ids: &[String]) -> String {
 fn get_degree_boilerplate(degrees: Vec<DegreeType>) -> String {
     // TODO: for the meantime we will use the max degree for all, i am facing a compile time issue with cpp
     // that is preventing me from using the real degree
-    let max = degrees.iter().max().unwrap();
+    // let max = degrees.iter().max().unwrap();
     let num_degrees = degrees.len();
 
     let mut degree_boilerplate = format!(
@@ -124,7 +147,8 @@ fn get_degree_boilerplate(degrees: Vec<DegreeType>) -> String {
     //     degree_boilerplate.push_str(&format!("   {},\n", degrees[i]));
     // }
     for _ in 0..degrees.len() {
-        degree_boilerplate.push_str(&format!("   {},\n", max));
+        // HACK HACK HACK ASK KESHA
+        degree_boilerplate.push_str(&format!("   {},\n", 10));
     }
     degree_boilerplate.push_str("};");
 
@@ -141,6 +165,7 @@ fn relation_includes() -> &'static str {
 #pragma once
 #include "../../relation_parameters.hpp"
 #include "../../relation_types.hpp"
+#include "./declare_views.hpp"
 "#
 }
 
@@ -163,29 +188,6 @@ pub(crate) fn create_row_type(name: &str, all_rows: &[String]) -> String {
 
     println!("{}", row_type);
     row_type
-}
-
-fn get_cols_in_identity_macro(all_rows_and_shifts: &[String]) -> String {
-    let make_view_per_row = all_rows_and_shifts
-        .iter()
-        .map(|row_name| {
-            let name = row_name.replace('.', "_");
-            format!("[[maybe_unused]] auto {name} = View(new_term.{name});  \\")
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    format!(
-        "
-    #define DECLARE_VIEWS(index) \
-        using View = typename std::tuple_element<index, ContainerOverSubrelations>::type; \
-        {make_view_per_row}
-
-    
-
-
-    "
-    )
 }
 
 fn create_identity<T: FieldElement>(

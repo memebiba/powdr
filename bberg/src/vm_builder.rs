@@ -18,7 +18,7 @@ use crate::verifier_builder::VerifierBuilder;
 
 // TODO: move to util
 fn sanitize_name(string: &String) -> String {
-    string.replace(['.', '[', ']'], "_")
+    string.replace(".", "_").replace("[", "_").replace("]", "_")
 }
 
 pub(crate) fn analyzed_to_cpp<F: FieldElement>(
@@ -39,7 +39,7 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     let relations = per_file_identites.keys().cloned().collect_vec();
 
     // TODO: duplicated but only used to get the shifts
-    let (_, __, _collected_cols, collected_shifts) = create_identities(&analyzed_identities);
+    let (_, __, collected_cols, collected_shifts) = create_identities(&analyzed_identities);
 
     // TODO: hack - this can be removed with some restructuring
     let shifted_polys: Vec<String> = collected_shifts
@@ -65,7 +65,7 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     // ----------------------- Create the relation files -----------------------
     for (relation_name, analyzed_idents) in per_file_identites.iter() {
         // TODO: make this more granular instead of doing everything at once
-        let (subrelations, identities, collected_polys, _collected_shifts) =
+        let (subrelations, identities, collected_polys, collected_shifts) =
             create_identities(analyzed_idents);
 
         // let all_cols_with_shifts = combine_cols(collected_polys, collected_shifts);
@@ -80,9 +80,10 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
             &subrelations,
             &identities,
             &row_type,
-            &all_cols_with_shifts,
         );
     }
+
+    bb_files.create_declare_views(&file_name, &all_cols_with_shifts);
 
     // ----------------------- Create the circuit builder file -----------------------
     bb_files.create_circuit_builder_hpp(
@@ -125,7 +126,7 @@ fn combine_cols(collected_polys: Vec<String>, collected_shifts: Vec<String>) -> 
         .chain(
             collected_shifts
                 .iter()
-                .map(|name| sanitize_name(name).to_owned().to_string())
+                .map(|name| format!("{}", sanitize_name(name).to_owned()))
                 .collect::<Vec<_>>(),
         )
         .collect_vec();
@@ -137,7 +138,7 @@ fn group_relations_per_file<F: FieldElement>(
 ) -> HashMap<String, Vec<Identity<Expression<F>>>> {
     identities
         .iter()
-        .cloned()
+        .map(|identity| identity.clone())
         .into_group_map_by(|identity| identity.source.file.clone().replace(".pil", ""))
 }
 
