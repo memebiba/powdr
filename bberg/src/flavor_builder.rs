@@ -43,15 +43,11 @@ impl FlavorBuilder for BBFiles {
         let num_all = all_cols_and_shifts.len();
         // TODO: for now we include a shift OF ALL witness wires, however this is not necessarily true
 
-        let precomputed = witness_get(fixed, false);
-
-        let witnesses = witness_get(witness, false);
         let precomputed_str = create_precomputed_entities(fixed);
         let witness_str = create_witness_entities(witness);
-        let all_shift = witness_get(shifted, false);
 
         let all_entities_get_wires = make_wires_set(all_cols_and_shifts);
-        let all_entities_pointer_view = create_flavor_members(all_cols_and_shifts);
+        let all_entities_flavor_members = create_flavor_members(all_cols_and_shifts);
 
         let all_entities_get_unshifted = make_wires_set(all_cols);
         let all_entities_get_to_be_shifted = make_wires_set(to_be_shifted);
@@ -121,13 +117,14 @@ class {name}Flavor {{
 
     private:
         template<typename DataType_>
-        class PrecomputedEntities : public PrecomputedEntities: public PrecomputedEntitiesBase {{
-            using DataType = DataType_;
+        class PrecomputedEntities : public PrecomputedEntitiesBase {{
             public:
+              using DataType = DataType_;
+
               {precomputed_str}
 
-              RefVector<DataType> get_sigma_polynomials() override {{ return {{}}; }};
-              RefVector<DataType> get_id_polynomials() override {{ return {{}}; }};
+              RefVector<DataType> get_sigma_polynomials() {{ return {{}}; }};
+              RefVector<DataType> get_id_polynomials() {{ return {{}}; }};
               RefVector<DataType> get_table_polynomials() {{ return {{}}; }};
           }};
           
@@ -142,32 +139,28 @@ class {name}Flavor {{
         class AllEntities {{
             public:
 
-            {precomputed} 
-            {witnesses}
-            {all_shift}
-
-            {all_entities_pointer_view}
+            {all_entities_flavor_members}
 
 
-            RefVector<DataType> get_wires() override {{
+            RefVector<DataType> get_wires() {{
                 return {{
 {all_entities_get_wires}
                 }};
             }};
 
-            RefVector<DataType> get_unshifted() override {{
+            RefVector<DataType> get_unshifted() {{
                 return {{
                     {all_entities_get_unshifted}
                 }};
             }};
 
-            RefVector<DataType> get_to_be_shifted() override {{
+            RefVector<DataType> get_to_be_shifted() {{
                 return {{
                     {all_entities_get_to_be_shifted}
                 }};
             }};
 
-            RefVector<DataType> get_shifted() override {{
+            RefVector<DataType> get_shifted() {{
                 return {{
                     {all_entities_get_shifted}
                 }};
@@ -192,9 +185,9 @@ class {name}Flavor {{
 
     using FoldedPolynomials = AllEntities<std::vector<FF>>;
 
-    class AllValues : public AllEntities<FF, FF> {{
+    class AllValues : public AllEntities<FF> {{
         public:
-          using Base = AllEntities<FF, FF>;
+          using Base = AllEntities<FF>;
           using Base::Base;
       }};
   
@@ -231,7 +224,7 @@ class {name}Flavor {{
      * @details During folding and sumcheck, the prover evaluates the relations on these univariates.
      */
     template <size_t LENGTH>
-    using ProverUnivariates = AllEntities<barretenberg::Univariate<FF, LENGTH>, barretenberg::Univariate<FF, LENGTH>>;
+    using ProverUnivariates = AllEntities<barretenberg::Univariate<FF, LENGTH>>;
 
     /**
      * @brief A container for univariates produced during the hot loop in sumcheck.
@@ -270,6 +263,7 @@ fn flavor_includes(name: &str, relation_file_names: &[String]) -> String {
 #include \"barretenberg/polynomials/barycentric.hpp\"
 #include \"barretenberg/polynomials/univariate.hpp\"
 
+#include \"barretenberg/flavor/flavor_macros.hpp\"
 #include \"barretenberg/transcript/transcript.hpp\"
 #include \"barretenberg/polynomials/evaluation_domain.hpp\"
 #include \"barretenberg/polynomials/polynomial.hpp\"
@@ -280,7 +274,6 @@ fn flavor_includes(name: &str, relation_file_names: &[String]) -> String {
 }
 
 fn create_precomputed_entities(fixed: &[String]) -> String {
-    let data_types = witness_get(fixed, false);
     let mut name_set = String::new();
     for name in fixed {
         name_set.push_str(&format!("{name}, "));
@@ -290,10 +283,9 @@ fn create_precomputed_entities(fixed: &[String]) -> String {
 
     format!(
         "
-        {data_types}
         {pointer_view}
 
-        RefVector<DataType> get_selectors() override {{
+        RefVector<DataType> get_selectors() {{
             return {{ {name_set} }};
         }};
         ",
@@ -309,8 +301,7 @@ fn create_flavor_members(entities: &[String]) -> String {
         .join(", ");
 
     format!(
-        "DEFINE_POINTER_VIEW(DataType, {pointer_list})",
-        label = label,
+        "DEFINE_FLAVOR_MEMBERS(DataType, {pointer_list})",
         pointer_list = pointer_list
     )
 }
@@ -353,13 +344,11 @@ fn make_wires_set(set: &[String]) -> String {
 }
 
 fn create_witness_entities(witness: &[String]) -> String {
-    let data_types = witness_get(witness, false);
     let get_wires = make_wires_set(witness);
     let pointer_view = create_flavor_members(witness);
 
     format!(
         "
-        {data_types}
 
         {pointer_view}
 
@@ -390,13 +379,13 @@ fn create_commitment_labels(all_ents: &[String]) -> String {
 
     format!(
         "
-        class CommitmentLabels: public AllEntities<std::string, std::string> {{
+        class CommitmentLabels: public AllEntities<std::string> {{
             private:
-                using Base = AllEntities<std::string, std::string>;
+                using Base = AllEntities<std::string>;
 
 
             public:
-                CommitmentLabels() : AllEntities<std::string, std::string>()
+                CommitmentLabels() : AllEntities<std::string>()
             {{
                 {labels}
             }};
@@ -418,9 +407,9 @@ fn create_verifier_commitments(fixed: &[String]) -> String {
 
     format!(
         "
-    class VerifierCommitments : public AllEntities<Commitment, CommitmentHandle> {{
+    class VerifierCommitments : public AllEntities<Commitment> {{
       private:
-        using Base = AllEntities<Commitment, CommitmentHandle>;
+        using Base = AllEntities<Commitment>;
 
       public:
         VerifierCommitments(const std::shared_ptr<VerificationKey>& verification_key,
@@ -476,7 +465,7 @@ fn generate_transcript(witness: &[String]) -> String {
             : BaseTranscript<FF>(proof)
         {{}}
 
-        void deserialize_full_transcript() override
+        void deserialize_full_transcript()
         {{
             size_t num_bytes_read = 0;
             circuit_size = deserialize_from_buffer<uint32_t>(proof_data, num_bytes_read);
@@ -498,7 +487,7 @@ fn generate_transcript(witness: &[String]) -> String {
             zm_pi_comm = deserialize_from_buffer<Commitment>(proof_data, num_bytes_read);
         }}
 
-        void serialize_full_transcript() override
+        void serialize_full_transcript()
         {{
             size_t old_proof_length = proof_data.size();
             BaseTranscript<FF>::proof_data.clear();
