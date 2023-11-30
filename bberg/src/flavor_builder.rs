@@ -51,8 +51,7 @@ impl FlavorBuilder for BBFiles {
         let all_shift = witness_get(shifted, false);
 
         let all_entities_get_wires = make_wires_set(all_cols_and_shifts);
-        let all_entities_pointer_view =
-            create_pointer_view("NUM_ALL_ENTITIES", all_cols_and_shifts);
+        let all_entities_pointer_view = create_flavor_members(all_cols_and_shifts);
 
         let all_entities_get_unshifted = make_wires_set(all_cols);
         let all_entities_get_to_be_shifted = make_wires_set(to_be_shifted);
@@ -121,25 +120,26 @@ class {name}Flavor {{
         static constexpr bool has_zero_row = true;
 
     private:
-        template<typename DataType, typename HandleType>
-        class PrecomputedEntities : public PrecomputedEntities_<DataType, HandleType, NUM_PRECOMPUTED_ENTITIES> {{
+        template<typename DataType_>
+        class PrecomputedEntities : public PrecomputedEntities: public PrecomputedEntitiesBase {{
+            using DataType = DataType_;
             public:
               {precomputed_str}
 
-              std::vector<HandleType> get_sigma_polynomials() override {{ return {{}}; }};
-              std::vector<HandleType> get_id_polynomials() override {{ return {{}}; }};
-              std::vector<HandleType> get_table_polynomials() {{ return {{}}; }};
+              RefVector<DataType> get_sigma_polynomials() override {{ return {{}}; }};
+              RefVector<DataType> get_id_polynomials() override {{ return {{}}; }};
+              RefVector<DataType> get_table_polynomials() {{ return {{}}; }};
           }};
           
-        template <typename DataType, typename HandleType>
-        class WitnessEntities : public WitnessEntities_<DataType, HandleType, NUM_WITNESS_ENTITIES> {{
+        template <typename DataType>
+        class WitnessEntities {{
             public:
 
             {witness_str} 
         }};
 
-        template <typename DataType, typename HandleType>
-        class AllEntities : public AllEntities_<DataType, HandleType, NUM_ALL_ENTITIES> {{
+        template <typename DataType>
+        class AllEntities {{
             public:
 
             {precomputed} 
@@ -149,25 +149,25 @@ class {name}Flavor {{
             {all_entities_pointer_view}
 
 
-            std::vector<HandleType> get_wires() override {{
+            RefVector<DataType> get_wires() override {{
                 return {{
 {all_entities_get_wires}
                 }};
             }};
 
-            std::vector<HandleType> get_unshifted() override {{
+            RefVector<DataType> get_unshifted() override {{
                 return {{
                     {all_entities_get_unshifted}
                 }};
             }};
 
-            std::vector<HandleType> get_to_be_shifted() override {{
+            RefVector<DataType> get_to_be_shifted() override {{
                 return {{
                     {all_entities_get_to_be_shifted}
                 }};
             }};
 
-            std::vector<HandleType> get_shifted() override {{
+            RefVector<DataType> get_shifted() override {{
                 return {{
                     {all_entities_get_shifted}
                 }};
@@ -176,23 +176,21 @@ class {name}Flavor {{
         }};
     
     public:
-    class ProvingKey : public ProvingKey_<PrecomputedEntities<Polynomial, PolynomialHandle>,
-    WitnessEntities<Polynomial, PolynomialHandle>> {{
+    class ProvingKey : public ProvingKey_<PrecomputedEntities<Polynomial>, WitnessEntities<Polynomial>> {{
         public:
         // Expose constructors on the base class
-        using Base = ProvingKey_<PrecomputedEntities<Polynomial, PolynomialHandle>,
-        WitnessEntities<Polynomial, PolynomialHandle>>;
+        using Base = ProvingKey_<PrecomputedEntities<Polynomial>, WitnessEntities<Polynomial>>;
         using Base::Base;
 
         // The plookup wires that store plookup read data.
         std::array<PolynomialHandle, 0> get_table_column_wires() {{ return {{}}; }};
     }};
 
-    using VerificationKey = VerificationKey_<PrecomputedEntities<Commitment, CommitmentHandle>>;
+    using VerificationKey = VerificationKey_<PrecomputedEntities<Commitment>>;
 
-    using ProverPolynomials = AllEntities<PolynomialHandle, PolynomialHandle>;
+    using ProverPolynomials = AllEntities<PolynomialHandle>;
 
-    using FoldedPolynomials = AllEntities<std::vector<FF>, PolynomialHandle>;
+    using FoldedPolynomials = AllEntities<std::vector<FF>>;
 
     class AllValues : public AllEntities<FF, FF> {{
         public:
@@ -200,7 +198,7 @@ class {name}Flavor {{
           using Base::Base;
       }};
   
-    class AllPolynomials : public AllEntities<Polynomial, PolynomialHandle> {{
+    class AllPolynomials : public AllEntities<Polynomial> {{
       public:
         [[nodiscard]] size_t get_polynomial_size() const {{ return this->{first_poly}.size(); }}
         [[nodiscard]] AllValues get_row(const size_t row_idx) const
@@ -214,9 +212,9 @@ class {name}Flavor {{
     }};
 
 
-    using RowPolynomials = AllEntities<FF, FF>;
+    using RowPolynomials = AllEntities<FF>;
 
-    class PartiallyEvaluatedMultivariates : public AllEntities<Polynomial, PolynomialHandle> {{
+    class PartiallyEvaluatedMultivariates : public AllEntities<Polynomial> {{
       public:
         PartiallyEvaluatedMultivariates() = default;
         PartiallyEvaluatedMultivariates(const size_t circuit_size)
@@ -288,14 +286,14 @@ fn create_precomputed_entities(fixed: &[String]) -> String {
         name_set.push_str(&format!("{name}, "));
     }
 
-    let pointer_view = create_pointer_view("NUM_PRECOMPUTED_ENTITIES", fixed);
+    let pointer_view = create_flavor_members(fixed);
 
     format!(
         "
         {data_types}
         {pointer_view}
 
-        std::vector<HandleType> get_selectors() override {{
+        RefVector<DataType> get_selectors() override {{
             return {{ {name_set} }};
         }};
         ",
@@ -303,15 +301,15 @@ fn create_precomputed_entities(fixed: &[String]) -> String {
     )
 }
 
-fn create_pointer_view(label: &str, entities: &[String]) -> String {
+fn create_flavor_members(entities: &[String]) -> String {
     let pointer_list = entities
         .iter()
-        .map(|e| format!("&{e}"))
+        .map(|e| e.clone())
         .collect::<Vec<_>>()
         .join(", ");
 
     format!(
-        "DEFINE_POINTER_VIEW({label}, {pointer_list})",
+        "DEFINE_POINTER_VIEW(DataType, {pointer_list})",
         label = label,
         pointer_list = pointer_list
     )
@@ -357,7 +355,7 @@ fn make_wires_set(set: &[String]) -> String {
 fn create_witness_entities(witness: &[String]) -> String {
     let data_types = witness_get(witness, false);
     let get_wires = make_wires_set(witness);
-    let pointer_view = create_pointer_view("NUM_WITNESS_ENTITIES", witness);
+    let pointer_view = create_flavor_members(witness);
 
     format!(
         "
@@ -365,13 +363,13 @@ fn create_witness_entities(witness: &[String]) -> String {
 
         {pointer_view}
 
-        std::vector<HandleType> get_wires() override {{
+        RefVector<DataType> get_wires() {{
             return {{ 
 {get_wires}
             }};
         }};
 
-        std::vector<HandleType> get_sorted_polynomials()  {{ return {{}}; }};
+        RefVector<DataType> get_sorted_polynomials()  {{ return {{}}; }};
         "
     )
 }
