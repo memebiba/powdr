@@ -71,8 +71,9 @@ namespace proof_system::{root_name}_vm {{
 
         let declare_views = format!(
             "
-    #define DECLARE_VIEWS(index) \
-        using View = typename std::tuple_element<index, ContainerOverSubrelations>::type; \
+    #define DECLARE_VIEWS(index) \\
+        using Accumulator = typename std::tuple_element<index, ContainerOverSubrelations>::type; \\
+        using View = typename Accumulator::View; \\
         {make_view_per_row}
 
 
@@ -135,20 +136,13 @@ fn get_relation_code(ids: &[String]) -> String {
 }
 
 fn get_degree_boilerplate(degrees: Vec<DegreeType>) -> String {
-    // TODO: for the meantime we will use the max degree for all, i am facing a compile time issue with cpp
-    // that is preventing me from using the real degree
-    // let max = degrees.iter().max().unwrap();
     let num_degrees = degrees.len();
 
     let mut degree_boilerplate = format!(
         "static constexpr std::array<size_t, {num_degrees}> SUBRELATION_PARTIAL_LENGTHS{{\n"
     );
-    // for i in 0..degrees.len() {
-    //     degree_boilerplate.push_str(&format!("   {},\n", degrees[i]));
-    // }
-    for _ in 0..degrees.len() {
-        // HACK HACK HACK ASK KESHA
-        degree_boilerplate.push_str(&format!("   {},\n", 10));
+    for i in 0..degrees.len() {
+        degree_boilerplate.push_str(&format!("   {},\n", degrees[i]));
     }
     degree_boilerplate.push_str("};");
 
