@@ -26,7 +26,7 @@ fn gen_estark_proof(file_name: &str, inputs: Vec<GoldilocksField>) {
         true,
         Some(backend::BackendType::EStark),
         vec![],
-        None
+        None,
     )
     .unwrap();
 }
@@ -44,7 +44,7 @@ fn gen_halo2_proof(file_name: &str, inputs: Vec<Bn254Field>) {
         true,
         Some(backend::BackendType::Halo2),
         vec![],
-        None
+        None,
     )
     .unwrap();
 }

@@ -28,7 +28,7 @@ struct ColumnGroups {
     unshifted: Vec<String>,
     to_be_shifted: Vec<String>,
     shifted: Vec<String>,
-    all_cols_with_shifts: Vec<String>
+    all_cols_with_shifts: Vec<String>,
 }
 
 pub(crate) fn analyzed_to_cpp<F: FieldElement>(
@@ -91,7 +91,7 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
         to_be_shifted,
         shifted,
         all_cols_with_shifts,
-     } = get_all_col_names(fixed, witness, &shifted_polys);
+    } = get_all_col_names(fixed, witness, &shifted_polys);
 
     bb_files.create_declare_views(file_name, &all_cols_with_shifts);
 
@@ -153,7 +153,8 @@ fn group_relations_per_file<F: FieldElement>(
     identities: &[Identity<Expression<F>>],
 ) -> HashMap<String, Vec<Identity<Expression<F>>>> {
     identities
-        .iter().cloned()
+        .iter()
+        .cloned()
         .into_group_map_by(|identity| identity.source.file.clone().replace(".pil", ""))
 }
 
@@ -171,8 +172,7 @@ fn get_all_col_names<F: FieldElement>(
     fixed: &[(String, Vec<F>)],
     witness: &[(String, Vec<F>)],
     to_be_shifted: &[String],
-) -> ColumnGroups 
- {
+) -> ColumnGroups {
     // Transformations
     let sanitize = |(name, _): &(String, Vec<F>)| sanitize_name(name).to_owned();
     let append_shift = |name: &String| format!("{}_shift", *name);
