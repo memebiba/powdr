@@ -1,4 +1,4 @@
-use crate::{file_writer::BBFiles, utils::get_relations_imports};
+use crate::{file_writer::BBFiles, utils::{get_relations_imports, map_with_newline}};
 
 pub trait FlavorBuilder {
     fn create_flavor_hpp(
@@ -202,7 +202,7 @@ fn container_size_definitions(num_precomputed: usize, num_witness:  usize, num_a
 fn return_ref_vector(name: &str, columns: &[String]) -> String {
     let comma_sep = create_comma_separated(columns);
 
-    format!("RefVector<DataType> {name} {{ return {comma_sep}; }};")
+    format!("RefVector<DataType> {name} {{ return {{ {comma_sep} }}; }};")
 }
 
 /// list -> "list[0], list[1], ... list[n-1]"
@@ -405,11 +405,11 @@ fn create_commitment_labels(all_ents: &[String]) -> String {
 }
 
 fn create_key_dereference(fixed: &[String]) -> String {
-    fixed
-        .iter()
-        .map(|name| format!("{name} = verification_key->{name};"))
-        .collect::<Vec<_>>()
-        .join("\n")
+    let deref_transformation = |name: &String| format!(
+        "{name} = verification_key->{name};"
+    );
+
+    map_with_newline(fixed, deref_transformation)
 }
 
 fn create_verifier_commitments(fixed: &[String]) -> String {
@@ -434,27 +434,19 @@ fn create_verifier_commitments(fixed: &[String]) -> String {
 }
 
 fn generate_transcript(witness: &[String]) -> String {
-    let declarations = witness
-        .iter()
-        .map(|f| format!("Commitment {f};"))
-        .collect::<Vec<_>>()
-        .join("\n");
-    let deserialize_wires = witness
-        .iter()
-        .map(|name| {
-            format!(
+    // Transformations
+    let declaration_transform = |c: &_| format!("Commitment {c};");
+    let deserialize_transform = |name: &_| format!(
                 "{name} = deserialize_from_buffer<Commitment>(BaseTranscript<FF>::proof_data, num_bytes_read);",
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-    let serialize_wires = witness
-        .iter()
-        .map(|name| {
-            format!("serialize_to_buffer<Commitment>({name}, BaseTranscript<FF>::proof_data);",)
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
+    );
+    let serialize_transform = |name: &_| format!(
+        "serialize_to_buffer<Commitment>({name}, BaseTranscript<FF>::proof_data);"
+    );
+
+    // Perform Transformations
+    let declarations = map_with_newline(witness, declaration_transform);
+    let deserialize_wires = map_with_newline(witness, deserialize_transform);
+    let serialize_wires = map_with_newline(witness, serialize_transform);
 
     format!("
     class Transcript : public BaseTranscript<FF> {{

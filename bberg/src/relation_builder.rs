@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use number::{DegreeType, FieldElement};
 
 use crate::file_writer::BBFiles;
+use crate::utils::map_with_newline;
 
 pub trait RelationBuilder {
     fn create_relations(
@@ -60,14 +61,10 @@ namespace proof_system::{root_name}_vm {{
     }
 
     fn create_declare_views(&self, name: &str, all_cols_and_shifts: &[String]) {
-        let make_view_per_row = all_cols_and_shifts
-            .iter()
-            .map(|row_name| {
-                let name = row_name.replace('.', "_");
-                format!("[[maybe_unused]] auto {name} = View(new_term.{name});  \\")
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
+        let view_transformation = |name: &String| format!(
+            "[[maybe_unused]] auto {name} = View(new_term.{name});  \\"
+        );
+        let make_view_per_row = map_with_newline(all_cols_and_shifts, view_transformation);
 
         let declare_views = format!(
             "
@@ -163,25 +160,17 @@ fn relation_includes() -> &'static str {
 "#
 }
 
-// Yucky that everything is allocated into vecs here
-fn create_row_type_items(names: &[String]) -> Vec<String> {
-    names
-        .iter()
-        .map(|name| format!("    FF {} {{}};", name.replace('.', "_")))
-        .collect::<Vec<_>>()
-}
-
 // Each vm will need to have a row which is a combination of all of the witness columns
 pub(crate) fn create_row_type(name: &str, all_rows: &[String]) -> String {
-    let all_annotated = create_row_type_items(all_rows);
-
-    let row_type = format!(
-        "template <typename FF> struct {name}Row {{ \n{}\n }}",
-        all_annotated.join("\n"),
+    let row_transformation = |row: &_| format!(
+        "    FF {row} {{row}};"
     );
+    let all_annotated = map_with_newline(all_rows, row_transformation);
 
-    println!("{}", row_type);
-    row_type
+    format!(
+        "template <typename FF> struct {name}Row {{ \n{}\n }}",
+        all_annotated,
+    )
 }
 
 fn create_identity<T: FieldElement>(
