@@ -21,6 +21,16 @@ use crate::utils::sanitize_name;
 use crate::utils::transform_map;
 use crate::verifier_builder::VerifierBuilder;
 
+struct ColumnGroups {
+    fixed: Vec<String>,
+    witness: Vec<String>,
+    all_cols: Vec<String>,
+    unshifted: Vec<String>,
+    to_be_shifted: Vec<String>,
+    shifted: Vec<String>,
+    all_cols_with_shifts: Vec<String>,
+}
+
 pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     analyzed: &Analyzed<F>,
     fixed: &[(String, Vec<F>)],
@@ -73,17 +83,17 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
         .collect();
 
     // Collect all column names and determine if they need a shift or not
-    let (
-        fixed_names,
-        witness_names,
+    let ColumnGroups {
+        fixed,
+        witness,
         all_cols,
         unshifted,
         to_be_shifted,
         shifted,
         all_cols_with_shifts,
-    ) = get_all_col_names(fixed, witness, &shifted_polys);
+    } = get_all_col_names(fixed, witness, &shifted_polys);
 
-    bb_files.create_declare_views(&file_name, &all_cols_with_shifts);
+    bb_files.create_declare_views(file_name, &all_cols_with_shifts);
 
     // ----------------------- Create the circuit builder file -----------------------
     bb_files.create_circuit_builder_hpp(
@@ -98,8 +108,8 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     bb_files.create_flavor_hpp(
         file_name,
         &relations,
-        &fixed_names,
-        &witness_names,
+        &fixed,
+        &witness,
         &all_cols,
         &to_be_shifted,
         &shifted,
@@ -111,7 +121,7 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     bb_files.create_composer_hpp(file_name);
 
     // ----------------------- Create the Verifier files -----------------------
-    bb_files.create_verifier_cpp(file_name, &witness_names);
+    bb_files.create_verifier_cpp(file_name, &witness);
     bb_files.create_verifier_hpp(file_name);
 
     // ----------------------- Create the Prover files -----------------------
@@ -140,11 +150,11 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
 ///
 /// This allows us to generate a relation.hpp file containing ONLY the relations for that .pil file
 fn group_relations_per_file<F: FieldElement>(
-    identities: &Vec<Identity<Expression<F>>>,
+    identities: &[Identity<Expression<F>>],
 ) -> HashMap<String, Vec<Identity<Expression<F>>>> {
     identities
         .iter()
-        .map(|identity| identity.clone())
+        .cloned()
         .into_group_map_by(|identity| identity.source.file.clone().replace(".pil", ""))
 }
 
@@ -162,17 +172,9 @@ fn get_all_col_names<F: FieldElement>(
     fixed: &[(String, Vec<F>)],
     witness: &[(String, Vec<F>)],
     to_be_shifted: &[String],
-) -> (
-    Vec<String>, // fixed
-    Vec<String>, // witness
-    Vec<String>, // all_cols
-    Vec<String>, // unshifted
-    Vec<String>, // to_be_shifted
-    Vec<String>, // shifted
-    Vec<String>, // with_shifts
-) {
+) -> ColumnGroups {
     // Transformations
-    let sanitize = |(name, _): &(String, Vec<F>)| sanitize_name(&name).to_owned();
+    let sanitize = |(name, _): &(String, Vec<F>)| sanitize_name(name).to_owned();
     let append_shift = |name: &String| format!("{}_shift", *name);
 
     // Gather sanitized column names
@@ -187,16 +189,17 @@ fn get_all_col_names<F: FieldElement>(
         .filter(|name| !shifted.contains(name))
         .collect();
 
-    let with_shifts: Vec<String> =
+    let all_cols_with_shifts: Vec<String> =
         flatten(&[fixed_names.clone(), witness_names.clone(), shifted.clone()]);
 
-    (
-        fixed_names,
-        witness_names,
+    // TODO: remove dup
+    ColumnGroups {
+        fixed: fixed_names,
+        witness: witness_names,
         all_cols,
         unshifted,
-        to_be_shifted.to_vec(),
+        to_be_shifted: to_be_shifted.to_vec(),
         shifted,
-        with_shifts,
-    )
+        all_cols_with_shifts,
+    }
 }
