@@ -16,12 +16,12 @@ pub fn get_relations_imports(name: &str, relations: &[String]) -> String {
 ///
 /// Column titles that we get from pil contain . to distinguish which pil namespace they belong to
 /// We need to replace these with _ to make them valid C++ identifiers
-pub fn sanitize_name(string: &String) -> String {
+pub fn sanitize_name(string: &str) -> String {
     string.replace(['.', '[', ']'], "_")
 }
 
 /// Capitalize
-pub fn capitalize(s: &String) -> String {
+pub fn capitalize(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
         None => String::new(),

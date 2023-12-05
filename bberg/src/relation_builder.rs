@@ -137,8 +137,8 @@ fn get_degree_boilerplate(degrees: Vec<DegreeType>) -> String {
     let mut degree_boilerplate = format!(
         "static constexpr std::array<size_t, {num_degrees}> SUBRELATION_PARTIAL_LENGTHS{{\n"
     );
-    for i in 0..degrees.len() {
-        degree_boilerplate.push_str(&format!("   {},\n", degrees[i]));
+    for degree in &degrees {
+        degree_boilerplate.push_str(&format!("   {},\n", degree));
     }
     degree_boilerplate.push_str("};");
 
@@ -251,7 +251,7 @@ fn craft_expression<T: FieldElement>(
 }
 
 pub(crate) fn create_identities<F: FieldElement>(
-    identities: &Vec<Identity<Expression<F>>>,
+    identities: &[Identity<Expression<F>>],
 ) -> (Vec<String>, Vec<BBIdentity>, Vec<String>, Vec<String>) {
     // We only want the expressions for now
     // When we have a poly type, we only need the left side of it
