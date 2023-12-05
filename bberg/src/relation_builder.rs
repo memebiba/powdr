@@ -61,9 +61,8 @@ namespace proof_system::{root_name}_vm {{
     }
 
     fn create_declare_views(&self, name: &str, all_cols_and_shifts: &[String]) {
-        let view_transformation = |name: &String| format!(
-            "[[maybe_unused]] auto {name} = View(new_term.{name});  \\"
-        );
+        let view_transformation =
+            |name: &String| format!("[[maybe_unused]] auto {name} = View(new_term.{name});  \\");
         let make_view_per_row = map_with_newline(all_cols_and_shifts, view_transformation);
 
         let declare_views = format!(
@@ -146,10 +145,6 @@ fn get_degree_boilerplate(degrees: Vec<DegreeType>) -> String {
     degree_boilerplate
 }
 
-// As all of our rows are annotated, we should be able to create
-// the row type by hand here
-// The row type is a combination of the fixed and witness columns
-
 // The include statements required for a new relation file
 fn relation_includes() -> &'static str {
     r#"
@@ -162,9 +157,7 @@ fn relation_includes() -> &'static str {
 
 // Each vm will need to have a row which is a combination of all of the witness columns
 pub(crate) fn create_row_type(name: &str, all_rows: &[String]) -> String {
-    let row_transformation = |row: &_| format!(
-        "    FF {row} {{row}};"
-    );
+    let row_transformation = |row: &_| format!("    FF {row} {{}};");
     let all_annotated = map_with_newline(all_rows, row_transformation);
 
     format!(
@@ -239,14 +232,6 @@ fn craft_expression<T: FieldElement>(
                 _ => unimplemented!("{:?}", expr),
             }
         }
-        // Expression::Constant(name) => {
-        //     panic!("Constant {name} was not inlined. optimize_constants needs to be run at least.")
-        // }
-        // pub enum UnaryOperator {
-        //     Plus,
-        //     Minus,
-        //     LogicalNot,
-        // }
         Expression::UnaryOperation(operator, expression) => match operator {
             AlgebraicUnaryOperator::Minus => {
                 let (d, e) =
@@ -265,7 +250,6 @@ fn craft_expression<T: FieldElement>(
     }
 }
 
-/// Todo, eventually these will need to be siloed based on the file name they are in
 pub(crate) fn create_identities<F: FieldElement>(
     identities: &Vec<Identity<Expression<F>>>,
 ) -> (Vec<String>, Vec<BBIdentity>, Vec<String>, Vec<String>) {
@@ -281,12 +265,6 @@ pub(crate) fn create_identities<F: FieldElement>(
             }
         })
         .collect::<Vec<_>>();
-
-    // Temp
-    // if collected_public_identities.len() > 0 {
-    //     println!("Public Identities are not supported yet in codegen, however some were collected");
-    //     println!("Public Identities: {:?}", collected_public_identities);
-    // }
 
     let mut identities = Vec::new();
     let mut subrelations = Vec::new();

@@ -1,4 +1,7 @@
-use crate::{file_writer::BBFiles, utils::{get_relations_imports, map_with_newline}};
+use crate::{
+    file_writer::BBFiles,
+    utils::{get_relations_imports, map_with_newline},
+};
 
 pub trait FlavorBuilder {
     fn create_flavor_hpp(
@@ -36,12 +39,14 @@ impl FlavorBuilder for BBFiles {
         // Top of file boilerplate
         let class_aliases = create_class_aliases();
         let relation_definitions = create_relation_definitions(name, relation_file_names);
-        let container_size_definitions = container_size_definitions(num_precomputed, num_witness, num_all);
+        let container_size_definitions =
+            container_size_definitions(num_precomputed, num_witness, num_all);
 
         // Entities classes
         let precomputed_entities = create_precomputed_entities(fixed);
         let witness_entities = create_witness_entities(witness);
-        let all_entities = create_all_entities(all_cols, to_be_shifted, shifted, all_cols_and_shifts);
+        let all_entities =
+            create_all_entities(all_cols, to_be_shifted, shifted, all_cols_and_shifts);
 
         let proving_and_verification_key = create_proving_and_verification_key();
         let polynomial_views = create_polynomial_views(first_poly);
@@ -53,7 +58,7 @@ impl FlavorBuilder for BBFiles {
         let transcript = generate_transcript(witness);
 
         let flavor_hpp = format!(
-        "
+            "
 {includes}
 
 namespace proof_system::honk {{
@@ -94,7 +99,7 @@ class {name}Flavor {{
     
     
     "
-    );
+        );
 
         self.write_file(&self.flavor, &format!("{}_flavor.hpp", name), &flavor_hpp);
     }
@@ -133,7 +138,7 @@ fn create_relations_tuple(master_name: &str, relation_file_names: &[String]) -> 
 }
 
 /// Create Class Aliases
-/// 
+///
 /// Contains boilerplate defining key characteristics of the flavor class
 fn create_class_aliases() -> &'static str {
     r#"
@@ -152,16 +157,15 @@ fn create_class_aliases() -> &'static str {
     "#
 }
 
-/// Create relation definitions 
-/// 
+/// Create relation definitions
+///
 /// Contains all of the boilerplate code required to generate relation definitions.
-/// We instantiate the Relations container, which contains a tuple of all of the separate relation file 
+/// We instantiate the Relations container, which contains a tuple of all of the separate relation file
 /// definitions.
-/// 
+///
 /// We then also define some constants, making use of the preprocessor.
 fn create_relation_definitions(name: &str, relation_file_names: &[String]) -> String {
-    
-    // Relations tuple = ns::relation_name_0, ns::relation_name_1, ... ns::relation_name_n (comma speratated) 
+    // Relations tuple = ns::relation_name_0, ns::relation_name_1, ... ns::relation_name_n (comma speratated)
     let comma_sep_relations = create_relations_tuple(name, relation_file_names);
 
     format!("
@@ -184,7 +188,11 @@ fn create_relation_definitions(name: &str, relation_file_names: &[String]) -> St
 }
 
 /// Create the number of columns boilerplate for the flavor file
-fn container_size_definitions(num_precomputed: usize, num_witness:  usize, num_all:  usize) -> String {
+fn container_size_definitions(
+    num_precomputed: usize,
+    num_witness: usize,
+    num_all: usize,
+) -> String {
     format!("
         static constexpr size_t NUM_PRECOMPUTED_ENTITIES = {num_precomputed}; 
         static constexpr size_t NUM_WITNESS_ENTITIES = {num_witness};
@@ -195,14 +203,14 @@ fn container_size_definitions(num_precomputed: usize, num_witness:  usize, num_a
     ")
 }
 
-/// Returns a Ref Vector with the given name, 
-/// 
+/// Returns a Ref Vector with the given name,
+///
 /// The vector returned will reference the columns names given
 /// Used in all entities declarations
 fn return_ref_vector(name: &str, columns: &[String]) -> String {
     let comma_sep = create_comma_separated(columns);
 
-    format!("RefVector<DataType> {name} {{ return {{ {comma_sep} }}; }};")
+    format!("RefVector<DataType> {name}() {{ return {{ {comma_sep} }}; }};")
 }
 
 /// list -> "list[0], list[1], ... list[n-1]"
@@ -211,8 +219,8 @@ fn create_comma_separated(list: &[String]) -> String {
 }
 
 /// Create Precomputed Entities
-/// 
-/// Precomputed first contains a pointer view defining all of the precomputed columns 
+///
+/// Precomputed first contains a pointer view defining all of the precomputed columns
 /// As-well as any polys conforming to tables / ids / permutations
 fn create_precomputed_entities(fixed: &[String]) -> String {
     let pointer_view = create_flavor_members(fixed);
@@ -262,7 +270,12 @@ fn create_witness_entities(witness: &[String]) -> String {
 }
 
 /// Creates container of all witness entities and shifts
-fn create_all_entities(all_cols: &[String], to_be_shifted: &[String], shifted: &[String], all_cols_and_shifts: &[String]) -> String {
+fn create_all_entities(
+    all_cols: &[String],
+    to_be_shifted: &[String],
+    shifted: &[String],
+    all_cols_and_shifts: &[String],
+) -> String {
     let all_entities_flavor_members = create_flavor_members(all_cols_and_shifts);
 
     let wires = return_ref_vector("get_wires", all_cols_and_shifts);
@@ -303,11 +316,9 @@ fn create_proving_and_verification_key() -> &'static str {
 
         using VerificationKey = VerificationKey_<PrecomputedEntities<Commitment>>;
     "#
-
 }
 
 fn create_polynomial_views(first_poly: &String) -> String {
-
     format!("
     using ProverPolynomials = AllEntities<PolynomialHandle>;
 
@@ -362,7 +373,6 @@ fn create_polynomial_views(first_poly: &String) -> String {
     ")
 }
 
-
 fn create_flavor_members(entities: &[String]) -> String {
     let pointer_list = create_comma_separated(entities);
 
@@ -405,9 +415,7 @@ fn create_commitment_labels(all_ents: &[String]) -> String {
 }
 
 fn create_key_dereference(fixed: &[String]) -> String {
-    let deref_transformation = |name: &String| format!(
-        "{name} = verification_key->{name};"
-    );
+    let deref_transformation = |name: &String| format!("{name} = verification_key->{name};");
 
     map_with_newline(fixed, deref_transformation)
 }
@@ -436,12 +444,14 @@ fn create_verifier_commitments(fixed: &[String]) -> String {
 fn generate_transcript(witness: &[String]) -> String {
     // Transformations
     let declaration_transform = |c: &_| format!("Commitment {c};");
-    let deserialize_transform = |name: &_| format!(
+    let deserialize_transform = |name: &_| {
+        format!(
                 "{name} = deserialize_from_buffer<Commitment>(BaseTranscript<FF>::proof_data, num_bytes_read);",
-    );
-    let serialize_transform = |name: &_| format!(
-        "serialize_to_buffer<Commitment>({name}, BaseTranscript<FF>::proof_data);"
-    );
+    )
+    };
+    let serialize_transform = |name: &_| {
+        format!("serialize_to_buffer<Commitment>({name}, BaseTranscript<FF>::proof_data);")
+    };
 
     // Perform Transformations
     let declarations = map_with_newline(witness, declaration_transform);

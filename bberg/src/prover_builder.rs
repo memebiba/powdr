@@ -72,16 +72,17 @@ impl ProverBuilder for BBFiles {
         let include_str = includes_cpp(name);
 
         // Create the wire assignments, prover_polynomial = key
-        let fixed_assignments = map_with_newline(fixed, |name| format!("prover_polynomials.{name} = key->{name};"));
-        let committed_assignments = map_with_newline(to_be_shifted, 
-        |name| {
-                format!(
-                    "
+        let fixed_assignments = map_with_newline(fixed, |name| {
+            format!("prover_polynomials.{name} = key->{name};")
+        });
+        let committed_assignments = map_with_newline(to_be_shifted, |name| {
+            format!(
+                "
 prover_polynomials.{name} = key->{name};
 prover_polynomials.{name}_shift = key->{name}.shifted();
 ",
-                )
-            });
+            )
+        });
 
         let prover_cpp = format!("
     {include_str}

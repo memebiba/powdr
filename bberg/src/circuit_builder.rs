@@ -1,5 +1,7 @@
 use crate::{
-    file_writer::BBFiles, relation_builder::create_row_type, utils::{get_relations_imports, map_with_newline},
+    file_writer::BBFiles,
+    relation_builder::create_row_type,
+    utils::{get_relations_imports, map_with_newline},
 };
 
 pub trait CircuitBuilder {
@@ -49,25 +51,25 @@ impl CircuitBuilder for BBFiles {
         let num_cols = all_cols.len() + to_be_shifted.len();
 
         // Declare mapping transformations
-        let compute_polys_transformation = |name: &String| format!(
-            "polys.{name}[i] = rows[i].{name};"
-        );
-        let all_polys_transformation = |name: &String| format!(
-            "polys.{name}_shift = Polynomial(polys.{name}.shifted());"
-        );
-        let check_circuit_transformation = |relation_name: &String| 
-                format!(
+        let compute_polys_transformation =
+            |name: &String| format!("polys.{name}[i] = rows[i].{name};");
+        let all_polys_transformation =
+            |name: &String| format!("polys.{name}_shift = Polynomial(polys.{name}.shifted());");
+        let check_circuit_transformation = |relation_name: &String| {
+            format!(
                     "if (!evaluate_relation.template operator()<{name}_vm::{relation_name}<FF>>(\"{relation_name}\")) {{
                         return false;
                     }}",
                     name = name,
                     relation_name = relation_name
-                );
+                )
+        };
 
         // Apply transformations
         let compute_polys_assignemnt = map_with_newline(all_cols, compute_polys_transformation);
         let all_poly_shifts = map_with_newline(to_be_shifted, all_polys_transformation);
-        let check_circuit_for_each_relation = map_with_newline(relations, check_circuit_transformation);
+        let check_circuit_for_each_relation =
+            map_with_newline(relations, check_circuit_transformation);
 
         let circuit_hpp = format!("
 {includes}

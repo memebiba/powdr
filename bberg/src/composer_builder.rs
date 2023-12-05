@@ -10,7 +10,7 @@ impl ComposerBuilder for BBFiles {
         // Create a composer file, this is used to a prover and verifier for our flavour
         let include_str = cpp_includes(name);
 
-        let map_polys_to_key = create_map_polys_to_key( all_cols);
+        let map_polys_to_key = create_map_polys_to_key(all_cols);
 
         let composer_cpp = format!(
         "
@@ -208,9 +208,8 @@ pub fn hpp_includes(name: &str) -> String {
 }
 
 fn create_map_polys_to_key(all_cols: &[String]) -> String {
-    let map_transformation = |name: &String| format!(
-        "proving_key->{name} = polynomials.{name};", name = name
-    );
+    let map_transformation =
+        |name: &String| format!("proving_key->{name} = polynomials.{name};", name = name);
 
     map_with_newline(all_cols, map_transformation)
 }

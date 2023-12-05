@@ -15,7 +15,10 @@ use crate::flavor_builder::FlavorBuilder;
 use crate::prover_builder::ProverBuilder;
 use crate::relation_builder::{create_identities, create_row_type, RelationBuilder};
 use crate::utils::capitalize;
+use crate::utils::collect_col;
+use crate::utils::flatten;
 use crate::utils::sanitize_name;
+use crate::utils::transform_map;
 use crate::verifier_builder::VerifierBuilder;
 
 pub(crate) fn analyzed_to_cpp<F: FieldElement>(
@@ -25,45 +28,27 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     name: Option<String>,
 ) {
     let file_name: &str = &name.unwrap_or("Example".to_owned());
-
     let mut bb_files = BBFiles::default(file_name.to_owned());
 
     // Inlining step to remove the intermediate poly definitions
     let analyzed_identities = inline_intermediate_polynomials(analyzed);
 
-    let per_file_identites = group_relations_per_file(&analyzed_identities);
-    // We require all of the relation file names in order to import them into the flavor
-    let relations = per_file_identites.keys().cloned().collect_vec();
-
-    // TODO: duplicated but only used to get the shifts
-    let (_, __, collected_cols, collected_shifts) = create_identities(&analyzed_identities);
-
-    // TODO: hack - this can be removed with some restructuring
-    let shifted_polys: Vec<String> = collected_shifts
-        .clone()
-        .iter()
-        .map(|s| s.replace("_shift", ""))
-        .collect();
-
-    // Collect all column names and determine if they need a shift or not
-    let (
-        fixed_names,
-        witness_names,
-        all_cols,
-        unshifted,
-        to_be_shifted,
-        shifted,
-        all_cols_with_shifts,
-    ) = get_all_col_names(fixed, witness, &shifted_polys);
+    // Group relations per file
+    let grouped_relations = group_relations_per_file(&analyzed_identities);
+    let relations = grouped_relations.keys().cloned().collect_vec();
 
     // Contains all of the rows in each relation, will be useful for creating composite builder types
     // TODO: this will change up
     let mut all_rows: HashMap<String, String> = HashMap::new();
+    let mut shifted_polys: Vec<String> = Vec::new();
+
     // ----------------------- Create the relation files -----------------------
-    for (relation_name, analyzed_idents) in per_file_identites.iter() {
+    for (relation_name, analyzed_idents) in grouped_relations.iter() {
         // TODO: make this more granular instead of doing everything at once
         let (subrelations, identities, collected_polys, collected_shifts) =
             create_identities(analyzed_idents);
+
+        shifted_polys.extend(collected_shifts);
 
         // let all_cols_with_shifts = combine_cols(collected_polys, collected_shifts);
         // TODO: This can probably be moved into the create_identities function
@@ -79,6 +64,24 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
             &row_type,
         );
     }
+
+    // TODO: hack - this can be removed with some restructuring
+    let shifted_polys: Vec<String> = shifted_polys
+        .clone()
+        .iter()
+        .map(|s| s.replace("_shift", ""))
+        .collect();
+
+    // Collect all column names and determine if they need a shift or not
+    let (
+        fixed_names,
+        witness_names,
+        all_cols,
+        unshifted,
+        to_be_shifted,
+        shifted,
+        all_cols_with_shifts,
+    ) = get_all_col_names(fixed, witness, &shifted_polys);
 
     bb_files.create_declare_views(&file_name, &all_cols_with_shifts);
 
@@ -155,49 +158,37 @@ fn group_relations_per_file<F: FieldElement>(
 /// - unshifted
 /// - to_be_shifted
 /// - all_cols_with_shifts
-///
 fn get_all_col_names<F: FieldElement>(
     fixed: &[(String, Vec<F>)],
     witness: &[(String, Vec<F>)],
     to_be_shifted: &[String],
 ) -> (
-    Vec<String>, // TODO: annotate each of these with what is there above
-    Vec<String>,
-    Vec<String>,
-    Vec<String>,
-    Vec<String>,
-    Vec<String>,
-    Vec<String>,
+    Vec<String>, // fixed
+    Vec<String>, // witness
+    Vec<String>, // all_cols
+    Vec<String>, // unshifted
+    Vec<String>, // to_be_shifted
+    Vec<String>, // shifted
+    Vec<String>, // with_shifts
 ) {
-    let fixed_names = fixed
-        .iter()
-        .map(|(name, _)| sanitize_name(name).to_owned())
-        .collect::<Vec<_>>();
-    let witness_names = witness
-        .iter()
-        .map(|(name, _)| sanitize_name(name).to_owned())
-        .collect::<Vec<_>>();
+    // Transformations
+    let sanitize = |(name, _): &(String, Vec<F>)| sanitize_name(&name).to_owned();
+    let append_shift = |name: &String| format!("{}_shift", *name);
 
-    let shifted: Vec<String> = to_be_shifted
-        .iter()
-        .map(|name| format!("{}_shift", *name))
-        .collect();
+    // Gather sanitized column names
+    let fixed_names = collect_col(fixed, sanitize);
+    let witness_names = collect_col(witness, sanitize);
 
-    let all_cols: Vec<String> = [fixed_names.clone(), witness_names.clone()]
+    // Group columns by properties
+    let shifted = transform_map(to_be_shifted, append_shift);
+    let all_cols: Vec<String> = flatten(&[fixed_names.clone(), witness_names.clone()]);
+    let unshifted: Vec<String> = flatten(&[fixed_names.clone(), witness_names.clone()])
         .into_iter()
-        .flatten()
-        .collect();
-
-    let unshifted: Vec<String> = [fixed_names.clone(), witness_names.clone()]
-        .into_iter()
-        .flatten()
         .filter(|name| !shifted.contains(name))
         .collect();
 
-    let with_shifts: Vec<String> = [fixed_names.clone(), witness_names.clone(), shifted.clone()]
-        .into_iter()
-        .flatten()
-        .collect();
+    let with_shifts: Vec<String> =
+        flatten(&[fixed_names.clone(), witness_names.clone(), shifted.clone()]);
 
     (
         fixed_names,
