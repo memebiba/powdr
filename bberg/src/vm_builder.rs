@@ -14,12 +14,9 @@ use crate::file_writer::BBFiles;
 use crate::flavor_builder::FlavorBuilder;
 use crate::prover_builder::ProverBuilder;
 use crate::relation_builder::{create_identities, create_row_type, RelationBuilder};
+use crate::utils::capitalize;
+use crate::utils::sanitize_name;
 use crate::verifier_builder::VerifierBuilder;
-
-// TODO: move to util
-fn sanitize_name(string: &String) -> String {
-    string.replace(".", "_").replace("[", "_").replace("]", "_")
-}
 
 pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     analyzed: &Analyzed<F>,
@@ -119,20 +116,26 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     bb_files.create_prover_hpp(file_name);
 }
 
-fn combine_cols(collected_polys: Vec<String>, collected_shifts: Vec<String>) -> Vec<String> {
-    let all_cols_with_shifts = collected_polys
-        .iter()
-        .map(|name| sanitize_name(name).to_owned())
-        .chain(
-            collected_shifts
-                .iter()
-                .map(|name| format!("{}", sanitize_name(name).to_owned()))
-                .collect::<Vec<_>>(),
-        )
-        .collect_vec();
-    all_cols_with_shifts
-}
-
+/// Group relations per file
+///
+/// The compiler returns all relations in one large vector, however we want to distinguish
+/// which files .pil files the relations belong to for later code gen
+///
+/// Say we have two files foo.pil and bar.pil
+/// foo.pil contains the following relations:
+///    - foo1
+///    - foo2
+/// bar.pil contains the following relations:
+///    - bar1
+///    - bar2
+///
+/// This function will return a hashmap with the following structure:
+/// {
+///  "foo": [foo1, foo2],
+///  "bar": [bar1, bar2]
+/// }
+///
+/// This allows us to generate a relation.hpp file containing ONLY the relations for that .pil file
 fn group_relations_per_file<F: FieldElement>(
     identities: &Vec<Identity<Expression<F>>>,
 ) -> HashMap<String, Vec<Identity<Expression<F>>>> {
@@ -142,12 +145,23 @@ fn group_relations_per_file<F: FieldElement>(
         .into_group_map_by(|identity| identity.source.file.clone().replace(".pil", ""))
 }
 
+/// Get all col names
+///
+/// In the flavor file, there are a number of different groups of columns that we need to keep track of
+/// This function will return all of the columns in the following groups:
+/// - fixed
+/// - witness
+/// - all_cols
+/// - unshifted
+/// - to_be_shifted
+/// - all_cols_with_shifts
+///
 fn get_all_col_names<F: FieldElement>(
     fixed: &[(String, Vec<F>)],
     witness: &[(String, Vec<F>)],
     to_be_shifted: &[String],
 ) -> (
-    Vec<String>,
+    Vec<String>, // TODO: annotate each of these with what is there above
     Vec<String>,
     Vec<String>,
     Vec<String>,
@@ -194,12 +208,4 @@ fn get_all_col_names<F: FieldElement>(
         shifted,
         with_shifts,
     )
-}
-
-fn capitalize(s: &String) -> String {
-    let mut c = s.chars();
-    match c.next() {
-        None => String::new(),
-        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-    }
 }
