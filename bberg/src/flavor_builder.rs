@@ -4,6 +4,7 @@ use crate::{
 };
 
 pub trait FlavorBuilder {
+    #[allow(clippy::too_many_arguments)]
     fn create_flavor_hpp(
         &mut self,
         name: &str,
@@ -226,9 +227,9 @@ fn create_precomputed_entities(fixed: &[String]) -> String {
     let pointer_view = create_flavor_members(fixed);
 
     let selectors = return_ref_vector("get_selectors", fixed);
-    let sigma_polys = return_ref_vector("get_sigma_polynomials", &vec![]);
-    let id_polys = return_ref_vector("get_id_polynomials", &vec![]);
-    let table_polys = return_ref_vector("get_table_polynomials", &vec![]);
+    let sigma_polys = return_ref_vector("get_sigma_polynomials", &[]);
+    let id_polys = return_ref_vector("get_id_polynomials", &[]);
+    let table_polys = return_ref_vector("get_table_polynomials", &[]);
 
     format!(
         "
@@ -252,7 +253,7 @@ fn create_witness_entities(witness: &[String]) -> String {
     let pointer_view = create_flavor_members(witness);
 
     let wires = return_ref_vector("get_wires", witness);
-    let sorted_polys = return_ref_vector("get_sorted_polynomials", &vec![]);
+    let sorted_polys = return_ref_vector("get_sorted_polynomials", &[]);
 
     format!(
         "

@@ -17,7 +17,7 @@ pub fn get_relations_imports(name: &str, relations: &[String]) -> String {
 /// Column titles that we get from pil contain . to distinguish which pil namespace they belong to
 /// We need to replace these with _ to make them valid C++ identifiers
 pub fn sanitize_name(string: &String) -> String {
-    string.replace(".", "_").replace("[", "_").replace("]", "_")
+    string.replace(['.', '[', ']'], "_")
 }
 
 /// Capitalize
@@ -67,6 +67,6 @@ where
 ///
 /// Returns a flattened concatenation of the input arrays
 pub fn flatten(list: &[Vec<String>]) -> Vec<String> {
-    let arr = list.iter().map(|item| item.clone());
+    let arr = list.iter().cloned();
     arr.into_iter().flatten().collect()
 }

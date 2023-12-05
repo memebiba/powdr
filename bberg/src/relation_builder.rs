@@ -18,7 +18,7 @@ pub trait RelationBuilder {
         name: &str,
         sub_relations: &[String],
         identities: &[BBIdentity],
-        row_type: &String,
+        row_type: &str,
     );
 
     fn create_declare_views(&self, name: &str, all_cols_and_shifts: &[String]);
@@ -34,7 +34,7 @@ impl RelationBuilder for BBFiles {
         name: &str,
         sub_relations: &[String],
         identities: &[BBIdentity],
-        row_type: &String,
+        row_type: &str,
     ) {
         let includes = relation_includes();
         let class_boilerplate = relation_class_boilerplate(name, sub_relations, identities);
@@ -78,7 +78,7 @@ namespace proof_system::{root_name}_vm {{
 
         self.write_file(
             &format!("{}/{name}", &self.rel),
-            &format!("declare_views.hpp"),
+            "declare_views.hpp",
             &declare_views,
         );
     }

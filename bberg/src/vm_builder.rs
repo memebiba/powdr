@@ -83,7 +83,7 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
         all_cols_with_shifts,
     ) = get_all_col_names(fixed, witness, &shifted_polys);
 
-    bb_files.create_declare_views(&file_name, &all_cols_with_shifts);
+    bb_files.create_declare_views(file_name, &all_cols_with_shifts);
 
     // ----------------------- Create the circuit builder file -----------------------
     bb_files.create_circuit_builder_hpp(
@@ -143,8 +143,7 @@ fn group_relations_per_file<F: FieldElement>(
     identities: &Vec<Identity<Expression<F>>>,
 ) -> HashMap<String, Vec<Identity<Expression<F>>>> {
     identities
-        .iter()
-        .map(|identity| identity.clone())
+        .iter().cloned()
         .into_group_map_by(|identity| identity.source.file.clone().replace(".pil", ""))
 }
 
@@ -172,7 +171,7 @@ fn get_all_col_names<F: FieldElement>(
     Vec<String>, // with_shifts
 ) {
     // Transformations
-    let sanitize = |(name, _): &(String, Vec<F>)| sanitize_name(&name).to_owned();
+    let sanitize = |(name, _): &(String, Vec<F>)| sanitize_name(name).to_owned();
     let append_shift = |name: &String| format!("{}_shift", *name);
 
     // Gather sanitized column names
