@@ -445,12 +445,11 @@ fn generate_transcript(witness: &[String]) -> String {
     let declaration_transform = |c: &_| format!("Commitment {c};");
     let deserialize_transform = |name: &_| {
         format!(
-                "{name} = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_bytes_read);",
-    )
+            "{name} = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_bytes_read);",
+        )
     };
-    let serialize_transform = |name: &_| {
-        format!("serialize_to_buffer<Commitment>({name}, Transcript::proof_data);")
-    };
+    let serialize_transform =
+        |name: &_| format!("serialize_to_buffer<Commitment>({name}, Transcript::proof_data);");
 
     // Perform Transformations
     let declarations = map_with_newline(witness, declaration_transform);
