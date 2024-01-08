@@ -97,6 +97,7 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
         &all_cols,
         &to_be_shifted,
         &all_cols_with_shifts,
+        
     );
 
     // ----------------------- Create the flavor file -----------------------
@@ -148,13 +149,13 @@ fn get_all_col_names<F: FieldElement>(
 
     let perm_inverses = get_inverses_from_permutations(permutations);
     let lookup_inverses = get_inverses_from_lookups(lookups);
-    let counts = get_counts_from_lookups(lookups);
+    let lookup_counts = get_counts_from_lookups(lookups);
 
     // Gather sanitized column names
     let fixed_names = collect_col(fixed, sanitize);
     let witness_names = collect_col(witness, sanitize);
-    let inverses = flatten(&[perm_inverses, lookup_inverses, counts]);
-    let witness_names = flatten(&[witness_names, inverses.clone()]);
+    let inverses = flatten(&[perm_inverses, lookup_inverses]);
+    let witness_names = flatten(&[witness_names, inverses.clone(), lookup_counts]);
 
     // Group columns by properties
     let shifted = transform_map(to_be_shifted, append_shift);
@@ -175,6 +176,6 @@ fn get_all_col_names<F: FieldElement>(
         to_be_shifted: to_be_shifted.to_vec(),
         shifted,
         all_cols_with_shifts,
-        inverses
+        inverses,
     }
 }

@@ -330,7 +330,7 @@ fn create_compute_inverse_exist(lhs_selector: &String, rhs_selector: &String) ->
     let lhs_computed_selector = format!("in.{lhs_selector}");
     let rhs_computed_selector = format!("in.{rhs_selector}");
     format!("
-    template <typename typename AllEntities> static inline auto inverse_polynomial_is_computed_at_row(const AllEntities& in) {{
+    template <typename Accumulator, typename AllEntities> static inline auto compute_inverse_exists(const AllEntities& in) {{
         using View = typename Accumulator::View;
         const auto is_operation = View({lhs_computed_selector});
         const auto is_table_entry = View({rhs_computed_selector});
