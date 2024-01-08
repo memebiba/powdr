@@ -1,4 +1,7 @@
-use crate::{file_writer::BBFiles, utils::{create_get_const_entities, create_get_nonconst_entities}};
+use crate::{
+    file_writer::BBFiles,
+    utils::{create_get_const_entities, create_get_nonconst_entities},
+};
 use ast::{
     analyzed::{AlgebraicExpression, Analyzed, Identity, IdentityKind},
     parsed::SelectedExpressions,
@@ -226,7 +229,6 @@ fn create_inverse_computed_at(inverse_selector: String) -> String {
         return ({inverse_computed_selector} == 1);
     }}")
 }
-
 
 fn get_perm_side<F: FieldElement>(
     def: &SelectedExpressions<AlgebraicExpression<F>>,

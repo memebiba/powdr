@@ -6,10 +6,10 @@ use crate::circuit_builder::CircuitBuilder;
 use crate::composer_builder::ComposerBuilder;
 use crate::file_writer::BBFiles;
 use crate::flavor_builder::FlavorBuilder;
-use crate::lookup_builder::Lookup;
-use crate::lookup_builder::LookupBuilder;
 use crate::lookup_builder::get_counts_from_lookups;
 use crate::lookup_builder::get_inverses_from_lookups;
+use crate::lookup_builder::Lookup;
+use crate::lookup_builder::LookupBuilder;
 use crate::permutation_builder::get_inverses_from_permutations;
 use crate::permutation_builder::Permutation;
 use crate::permutation_builder::PermutationBuilder;
@@ -97,7 +97,6 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
         &all_cols,
         &to_be_shifted,
         &all_cols_with_shifts,
-        
     );
 
     // ----------------------- Create the flavor file -----------------------

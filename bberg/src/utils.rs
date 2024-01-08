@@ -1,5 +1,5 @@
-use number::FieldElement;
 use itertools::Itertools;
+use number::FieldElement;
 
 /// Get Relations Imports
 ///
@@ -73,9 +73,8 @@ pub fn flatten(list: &[Vec<String>]) -> Vec<String> {
     arr.into_iter().flatten().collect()
 }
 
-
 /// Create Forward As Tuple
-/// 
+///
 /// Helper function to create a forward as tuple cpp statement
 pub fn create_forward_as_tuple(settings: &[String]) -> String {
     let adjusted = settings.iter().map(|col| format!("in.{col}")).join(",\n");

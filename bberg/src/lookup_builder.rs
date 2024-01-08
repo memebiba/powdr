@@ -1,5 +1,7 @@
-
-use crate::{file_writer::BBFiles, utils::{create_get_const_entities, create_get_nonconst_entities}};
+use crate::{
+    file_writer::BBFiles,
+    utils::{create_get_const_entities, create_get_nonconst_entities},
+};
 use ast::{
     analyzed::{AlgebraicExpression, Analyzed, Identity, IdentityKind},
     parsed::SelectedExpressions,
@@ -16,7 +18,7 @@ use crate::utils::sanitize_name;
 pub struct Lookup {
     ///  the name given to the inverse helper column
     pub attribute: Option<String>,
-    /// The name of the counts polynomial that stores the number of times a lookup is read 
+    /// The name of the counts polynomial that stores the number of times a lookup is read
     pub counts_poly: String,
     /// the left side of the lookup
     pub left: LookupSide,
@@ -106,7 +108,9 @@ fn create_lookups(bb_files: &BBFiles, project_name: &str, lookups: &Vec<Lookup>)
 fn create_relation_exporter(lookup_name: &str) -> String {
     let settings_name = format!("{}_lookup_settings", lookup_name);
     let lookup_export = format!("template <typename FF_> using {lookup_name}_relation = GenericLookupRelation<{settings_name}, FF_>;");
-    let relation_export = format!("template <typename FF_> using {lookup_name} = GenericLookup<{settings_name}, FF_>;");
+    let relation_export = format!(
+        "template <typename FF_> using {lookup_name} = GenericLookup<{settings_name}, FF_>;"
+    );
 
     format!(
         "
@@ -130,22 +134,31 @@ fn lookup_settings_includes() -> &'static str {
 fn create_lookup_settings_file(lookup: &Lookup) -> String {
     println!("Lookup: {:?}", lookup);
     let columns_per_set = lookup.left.cols.len();
-    // TODO(md): Throw an error if no attribute is provided for the lookup
-    // TODO(md): In the future we will need to condense off the back of this - combining those with the same inverse column
     let lookup_name = lookup
         .attribute
         .clone()
-        .expect("Inverse column name must be provided"); // TODO(md): catch this earlier than here
+        .expect("Inverse column name must be provided within lookup attribute - #[<here>]");
     let counts_poly_name = lookup.counts_poly.to_owned();
 
     // NOTE: syntax is not flexible enough to enable the single row case right now :(:(:(:(:))))
     // This also will need to work for both sides of this !
-    let lhs_selector = lookup.left.selector.clone().expect("Left hand side selector for lookup required"); // TODO: deal with unwrap
-    let rhs_selector = lookup.right.selector.clone().expect("Right hand side selector for lookup required"); // TODO: deal with unwrap
+    let lhs_selector = lookup
+        .left
+        .selector
+        .clone()
+        .expect("Left hand side selector for lookup required");
+    let rhs_selector = lookup
+        .right
+        .selector
+        .clone()
+        .expect("Right hand side selector for lookup required");
     let lhs_cols = lookup.left.cols.clone();
     let rhs_cols = lookup.right.cols.clone();
 
-    assert!(lhs_cols.len() == rhs_cols.len(), "Lookup columns lhs must be the same length as rhs");
+    assert!(
+        lhs_cols.len() == rhs_cols.len(),
+        "Lookup columns lhs must be the same length as rhs"
+    );
 
     // 0.                       The polynomial containing the inverse products -> taken from the attributes
     // 1.                       The polynomial with the counts!
@@ -157,35 +170,34 @@ fn create_lookup_settings_file(lookup: &Lookup) -> String {
         lookup_name.clone(),
         counts_poly_name.clone(),
         lhs_selector.clone(),
-        rhs_selector.clone(), // TODO: update this away from the simple example
+        rhs_selector.clone(),
     ]
     .to_vec();
 
     lookup_entities.extend(lhs_cols);
     lookup_entities.extend(rhs_cols);
 
-    // TODO: implement
     // NOTE: these are hardcoded as 1 for now until more optimizations are required
     let read_terms = 1;
     let write_terms = 1;
     let lookup_tuple_size = columns_per_set;
 
     // NOTE: hardcoded until optimizations required
-    let inverse_degree = 2; 
+    let inverse_degree = 2;
     let read_term_degree = 0;
     let write_term_degree = 0;
     let read_term_types = "{0}";
     let write_term_types = "{0}";
 
     let lookup_settings_includes = lookup_settings_includes();
-    let inverse_polynomial_is_computed_at_row  = create_inverse_computed_at(&lhs_selector, &rhs_selector);
-    let compute_inverse_exists  = create_compute_inverse_exist(&lhs_selector, &rhs_selector);
+    let inverse_polynomial_is_computed_at_row =
+        create_inverse_computed_at(&lhs_selector, &rhs_selector);
+    let compute_inverse_exists = create_compute_inverse_exist(&lhs_selector, &rhs_selector);
     let const_entities = create_get_const_entities(&lookup_entities);
     let nonconst_entities = create_get_nonconst_entities(&lookup_entities);
     let relation_exporter = create_relation_exporter(&lookup_name);
 
     format!(
-        // TODO: replace with the inverse label name!
         "
         {lookup_settings_includes}
 
@@ -316,7 +328,6 @@ fn create_lookup_settings_file(lookup: &Lookup) -> String {
     )
 }
 
-// TODO: make this dynamic such that there can be more than one
 fn create_inverse_computed_at(lhs_selector: &String, rhs_selector: &String) -> String {
     let lhs_computed_selector = format!("in.{lhs_selector}");
     let rhs_computed_selector = format!("in.{rhs_selector}");
@@ -338,9 +349,7 @@ fn create_compute_inverse_exist(lhs_selector: &String, rhs_selector: &String) ->
     }}")
 }
 
-fn get_perm_side<F: FieldElement>(
-    def: &SelectedExpressions<AlgebraicExpression<F>>,
-) -> LookupSide {
+fn get_perm_side<F: FieldElement>(def: &SelectedExpressions<AlgebraicExpression<F>>) -> LookupSide {
     let get_name = |expr: &AlgebraicExpression<F>| match expr {
         AlgebraicExpression::Reference(a_ref) => sanitize_name(&a_ref.name),
         _ => panic!("Expected reference"),
@@ -355,4 +364,3 @@ fn get_perm_side<F: FieldElement>(
             .collect_vec(),
     }
 }
-    
