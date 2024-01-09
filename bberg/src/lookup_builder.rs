@@ -15,6 +15,8 @@ use crate::utils::sanitize_name;
 /// Lookup
 ///
 /// Contains the information required to produce a lookup relation
+/// Lookup object and lookup side object are very similar in structure, however they are duplicated for 
+/// readability.
 pub struct Lookup {
     ///  the name given to the inverse helper column
     pub attribute: Option<String>,
@@ -140,8 +142,9 @@ fn create_lookup_settings_file(lookup: &Lookup) -> String {
         .expect("Inverse column name must be provided within lookup attribute - #[<here>]");
     let counts_poly_name = lookup.counts_poly.to_owned();
 
-    // NOTE: syntax is not flexible enough to enable the single row case right now :(:(:(:(:))))
-    // This also will need to work for both sides of this !
+    // NOTE: https://github.com/AztecProtocol/aztec-packages/issues/3879
+    // Settings are not flexible enough to combine inverses
+
     let lhs_selector = lookup
         .left
         .selector
