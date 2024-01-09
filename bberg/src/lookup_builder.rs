@@ -15,7 +15,7 @@ use crate::utils::sanitize_name;
 /// Lookup
 ///
 /// Contains the information required to produce a lookup relation
-/// Lookup object and lookup side object are very similar in structure, however they are duplicated for 
+/// Lookup object and lookup side object are very similar in structure, however they are duplicated for
 /// readability.
 pub struct Lookup {
     ///  the name given to the inverse helper column
@@ -38,7 +38,6 @@ pub struct LookupSide {
     /// The columns involved in this side of the lookup
     cols: Vec<String>,
 }
-
 
 pub trait LookupBuilder {
     /// Takes in an AST and works out what lookup relations are needed
@@ -352,7 +351,9 @@ fn create_compute_inverse_exist(lhs_selector: &String, rhs_selector: &String) ->
     }}")
 }
 
-fn get_lookup_side<F: FieldElement>(def: &SelectedExpressions<AlgebraicExpression<F>>) -> LookupSide {
+fn get_lookup_side<F: FieldElement>(
+    def: &SelectedExpressions<AlgebraicExpression<F>>,
+) -> LookupSide {
     let get_name = |expr: &AlgebraicExpression<F>| match expr {
         AlgebraicExpression::Reference(a_ref) => sanitize_name(&a_ref.name),
         _ => panic!("Expected reference"),
