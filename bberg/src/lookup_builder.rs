@@ -42,7 +42,7 @@ pub struct LookupSide {
 
 pub trait LookupBuilder {
     /// Takes in an AST and works out what lookup relations are needed
-    /// Note: returns the name of the inverse columns, such that they can be added to he prover in subsequent steps
+    /// Note: returns the name of the inverse columns, such that they can be added to the prover in subsequent steps
     fn create_lookup_files<F: FieldElement>(
         &self,
         name: &str,
@@ -317,7 +317,7 @@ fn create_lookup_settings_file(lookup: &Lookup) -> String {
             {const_entities}
 
             /**
-             * @brief Get all the entities for the lookup when only need to read them
+             * @brief Get all the entities for the lookup when we only need to read them
              * @details Same as in get_const_entities, but nonconst
              *
              * @return All the entities needed for the lookup
