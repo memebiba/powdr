@@ -91,8 +91,7 @@ impl CircuitBuilder for BBFiles {
             format!(
                     "if (!evaluate_logderivative.template operator()<honk::sumcheck::{lookup_name}_relation<FF>>(\"{lookup_name}\")) {{
                         return false;
-                    }}",
-                    lookup_name = lookup_name
+                    }}"
                 )
         };
 

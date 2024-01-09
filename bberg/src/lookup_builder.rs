@@ -27,7 +27,7 @@ pub struct Lookup {
 }
 
 #[derive(Debug)]
-/// PermSide
+/// LookupSide
 ///
 /// One side of a two sided lookup relationship
 pub struct LookupSide {
@@ -36,6 +36,7 @@ pub struct LookupSide {
     /// The columns involved in this side of the lookup
     cols: Vec<String>,
 }
+
 
 pub trait LookupBuilder {
     /// Takes in an AST and works out what lookup relations are needed
@@ -53,23 +54,23 @@ impl LookupBuilder for BBFiles {
         project_name: &str,
         analyzed: &Analyzed<F>,
     ) -> Vec<Lookup> {
-        let perms: Vec<&Identity<AlgebraicExpression<F>>> = analyzed
+        let lookups: Vec<&Identity<AlgebraicExpression<F>>> = analyzed
             .identities
             .iter()
             .filter(|identity| matches!(identity.kind, IdentityKind::Plookup))
             .collect();
-        let new_perms = perms
+        let new_lookups = lookups
             .iter()
-            .map(|perm| Lookup {
-                attribute: perm.attribute.clone(),
-                counts_poly: format!("{}_counts", perm.attribute.clone().unwrap()),
-                left: get_perm_side(&perm.left),
-                right: get_perm_side(&perm.right),
+            .map(|lookup| Lookup {
+                attribute: lookup.attribute.clone(),
+                counts_poly: format!("{}_counts", lookup.attribute.clone().unwrap()),
+                left: get_lookup_side(&lookup.left),
+                right: get_lookup_side(&lookup.right),
             })
             .collect_vec();
 
-        create_lookups(self, project_name, &new_perms);
-        new_perms
+        create_lookups(self, project_name, &new_lookups);
+        new_lookups
     }
 }
 
@@ -77,21 +78,21 @@ impl LookupBuilder for BBFiles {
 pub fn get_inverses_from_lookups(lookups: &[Lookup]) -> Vec<String> {
     lookups
         .iter()
-        .map(|perm| perm.attribute.clone().unwrap())
+        .map(|lookup| lookup.attribute.clone().unwrap())
         .collect()
 }
 
 pub fn get_counts_from_lookups(lookups: &[Lookup]) -> Vec<String> {
     lookups
         .iter()
-        .map(|perm| perm.counts_poly.clone())
+        .map(|lookup| lookup.counts_poly.clone())
         .collect()
 }
 
 /// Write the lookup settings files to disk
 fn create_lookups(bb_files: &BBFiles, project_name: &str, lookups: &Vec<Lookup>) {
     for lookup in lookups {
-        let perm_settings = create_lookup_settings_file(lookup);
+        let lookup_settings = create_lookup_settings_file(lookup);
 
         let folder = format!("{}/{}", bb_files.rel, project_name);
         let file_name = format!(
@@ -99,7 +100,7 @@ fn create_lookups(bb_files: &BBFiles, project_name: &str, lookups: &Vec<Lookup>)
             lookup.attribute.clone().unwrap_or("NONAME".to_owned()),
             ".hpp".to_owned()
         );
-        bb_files.write_file(&folder, &file_name, &perm_settings);
+        bb_files.write_file(&folder, &file_name, &lookup_settings);
     }
 }
 
@@ -132,7 +133,6 @@ fn lookup_settings_includes() -> &'static str {
 }
 
 fn create_lookup_settings_file(lookup: &Lookup) -> String {
-    println!("Lookup: {:?}", lookup);
     let columns_per_set = lookup.left.cols.len();
     let lookup_name = lookup
         .attribute
@@ -209,7 +209,7 @@ fn create_lookup_settings_file(lookup: &Lookup) -> String {
          *
          * @details To create your own lookup:
          * 1) Create a copy of this class and rename it
-         * 2) Update all the values with the ones needed for your permutation
+         * 2) Update all the values with the ones needed for your lookuputation
          * 3) Update \"DECLARE_LOOKUP_IMPLEMENTATIONS_FOR_ALL_SETTINGS\" and \"DEFINE_LOOKUP_IMPLEMENTATIONS_FOR_ALL_SETTINGS\" to
          * include the new settings
          * 4) Add the relation with the chosen settings to Relations in the flavor (for example,\"`
@@ -349,7 +349,7 @@ fn create_compute_inverse_exist(lhs_selector: &String, rhs_selector: &String) ->
     }}")
 }
 
-fn get_perm_side<F: FieldElement>(def: &SelectedExpressions<AlgebraicExpression<F>>) -> LookupSide {
+fn get_lookup_side<F: FieldElement>(def: &SelectedExpressions<AlgebraicExpression<F>>) -> LookupSide {
     let get_name = |expr: &AlgebraicExpression<F>| match expr {
         AlgebraicExpression::Reference(a_ref) => sanitize_name(&a_ref.name),
         _ => panic!("Expected reference"),
