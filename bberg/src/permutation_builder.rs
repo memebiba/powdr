@@ -122,17 +122,16 @@ fn permutation_settings_includes() -> &'static str {
 fn create_permutation_settings_file(permutation: &Permutation) -> String {
     println!("Permutation: {:?}", permutation);
     let columns_per_set = permutation.left.cols.len();
-    // TODO(md): Throw an error if no attribute is provided for the permutation
     // TODO(md): In the future we will need to condense off the back of this - combining those with the same inverse column
     let permutation_name = permutation
         .attribute
         .clone()
-        .expect("Inverse column name must be provided"); // TODO(md): catch this earlier than here
+        .expect("Inverse column name must be provided using attribute syntax");
 
     // This also will need to work for both sides of this !
-    let lhs_selector = permutation.left.selector.clone().unwrap(); // TODO: deal with unwrap
+    let lhs_selector = permutation.left.selector.clone().expect("At least one selector must be provided");
     // If a rhs selector is not present, then we use the rhs selector -- TODO(md): maybe we want the default to be always on?
-    let rhs_selector = permutation.right.selector.clone().unwrap_or(lhs_selector.clone()); // TODO: deal with unwrap
+    let rhs_selector = permutation.right.selector.clone().unwrap_or(lhs_selector.clone());
 
     let lhs_cols = permutation.left.cols.clone();
     let rhs_cols = permutation.right.cols.clone();
@@ -156,7 +155,6 @@ fn create_permutation_settings_file(permutation: &Permutation) -> String {
 
     let permutation_settings_includes = permutation_settings_includes();
 
-    // TODO(md): this should maybe be a combination of both lhs and rhs
     let inverse_computed_at = create_inverse_computed_at(&lhs_selector, &rhs_selector);
     let const_entities = create_get_const_entities(&perm_entities);
     let nonconst_entities = create_get_nonconst_entities(&perm_entities);
