@@ -129,9 +129,11 @@ fn create_permutation_settings_file(permutation: &Permutation) -> String {
         .clone()
         .expect("Inverse column name must be provided"); // TODO(md): catch this earlier than here
 
-    // NOTE: syntax is not flexible enough to enable the single row case right now :(:(:(:(:))))
     // This also will need to work for both sides of this !
-    let selector = permutation.left.selector.clone().unwrap(); // TODO: deal with unwrap
+    let lhs_selector = permutation.left.selector.clone().unwrap(); // TODO: deal with unwrap
+    // If a rhs selector is not present, then we use the rhs selector -- TODO(md): maybe we want the default to be always on?
+    let rhs_selector = permutation.right.selector.clone().unwrap_or(lhs_selector.clone()); // TODO: deal with unwrap
+
     let lhs_cols = permutation.left.cols.clone();
     let rhs_cols = permutation.right.cols.clone();
 
@@ -143,9 +145,9 @@ fn create_permutation_settings_file(permutation: &Permutation) -> String {
     // 4 + columns per set.. .  rhs cols
     let mut perm_entities: Vec<String> = [
         permutation_name.clone(),
-        selector.clone(),
-        selector.clone(),
-        selector.clone(), // TODO: update this away from the simple example
+        lhs_selector.clone(),
+        lhs_selector.clone(),
+        rhs_selector.clone(),
     ]
     .to_vec();
 
@@ -153,13 +155,14 @@ fn create_permutation_settings_file(permutation: &Permutation) -> String {
     perm_entities.extend(rhs_cols);
 
     let permutation_settings_includes = permutation_settings_includes();
-    let inverse_computed_at = create_inverse_computed_at(selector);
+
+    // TODO(md): this should maybe be a combination of both lhs and rhs
+    let inverse_computed_at = create_inverse_computed_at(&lhs_selector, &rhs_selector);
     let const_entities = create_get_const_entities(&perm_entities);
     let nonconst_entities = create_get_nonconst_entities(&perm_entities);
     let relation_exporter = create_relation_exporter(&permutation_name);
 
     format!(
-        // TODO: replace with the inverse label name!
         "
         {permutation_settings_includes}
 
@@ -221,12 +224,12 @@ fn create_permutation_settings_file(permutation: &Permutation) -> String {
     )
 }
 
-// TODO: make this dynamic such that there can be more than one
-fn create_inverse_computed_at(inverse_selector: String) -> String {
-    let inverse_computed_selector = format!("in.{inverse_selector}");
+fn create_inverse_computed_at(lhs_selector: &String, rhs_selector: &String) -> String {
+    let lhs_computed_selector = format!("in.{lhs_selector}");
+    let rhs_computed_selector = format!("in.{rhs_selector}");
     format!("
     template <typename AllEntities> static inline auto inverse_polynomial_is_computed_at_row(const AllEntities& in) {{
-        return ({inverse_computed_selector} == 1);
+        return ({lhs_computed_selector } == 1 || {rhs_computed_selector} == 1);
     }}")
 }
 
