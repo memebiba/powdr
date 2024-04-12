@@ -1,5 +1,6 @@
 use ast::analyzed::Analyzed;
 
+use itertools::Itertools;
 use number::FieldElement;
 
 use crate::circuit_builder::CircuitBuilder;
@@ -29,6 +30,8 @@ struct ColumnGroups {
     fixed: Vec<String>,
     /// witness or commit columns in pil -> will be found in proof
     witness: Vec<String>,
+    // public input columns, evaluations will be calculated within the verifier
+    public: Vec<String>,
     /// witness or commit columns in pil, with out the inverse columns
     witnesses_without_inverses: Vec<String>,
     /// fixed + witness columns without lookup inverses
@@ -89,6 +92,7 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     let ColumnGroups {
         fixed,
         witness,
+        public,
         witnesses_without_inverses,
         all_cols,
         all_cols_without_inverses,
@@ -130,8 +134,8 @@ pub(crate) fn analyzed_to_cpp<F: FieldElement>(
     bb_files.create_composer_hpp(file_name);
 
     // ----------------------- Create the Verifier files -----------------------
-    bb_files.create_verifier_cpp(file_name, &witnesses_without_inverses, &inverses);
-    bb_files.create_verifier_hpp(file_name);
+    bb_files.create_verifier_cpp(file_name, &witnesses_without_inverses, &inverses, &public);
+    bb_files.create_verifier_hpp(file_name, &public);
 
     // ----------------------- Create the Prover files -----------------------
     bb_files.create_prover_cpp(file_name, &witnesses_without_inverses, &inverses);
@@ -165,7 +169,32 @@ fn get_all_col_names<F: FieldElement>(
 
     // Gather sanitized column names
     let fixed_names = collect_col(fixed, sanitize);
-    let witness_names = collect_col(witness, sanitize);
+
+    // TODO: function to separate?
+    let witness_names: Vec<String> = collect_col(witness, sanitize)
+        .into_iter()
+        .map(|name| {
+            if name.ends_with("__is_public") {
+                name.strip_suffix("__is_public")
+                    .map(|s| s.to_owned())
+                    .unwrap() // unwrap checked above
+            } else {
+                name
+            }
+        })
+        .collect();
+    let public_input_column_names: Vec<String> = collect_col(witness, sanitize)
+        .into_iter()
+        .filter_map(|name| name.strip_suffix("__is_public").map(|s| s.to_owned()))
+        .collect();
+    assert!(
+        public_input_column_names.len() == 1,
+        "There should only be one public input column (for now)"
+    );
+
+    println!("fixed_names: {:?}", fixed_names);
+    println!("wit_names: {:?}", witness_names);
+    println!("public_names: {:?}", public_input_column_names);
 
     let inverses = flatten(&[perm_inverses, lookup_inverses]);
     let witnesses_without_inverses = flatten(&[witness_names.clone(), lookup_counts.clone()]);
@@ -190,6 +219,7 @@ fn get_all_col_names<F: FieldElement>(
     ColumnGroups {
         fixed: fixed_names,
         witness: witnesses_with_inverses,
+        public: public_input_column_names,
         all_cols_without_inverses,
         witnesses_without_inverses,
         all_cols,
