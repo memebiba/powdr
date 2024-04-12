@@ -52,18 +52,32 @@ impl VerifierBuilder for BBFiles {
             format!("bool {name}Verifier::verify_proof(const HonkProof& proof)")
         };
 
-        let public_inputs_check = if has_public_input_columns {
+        let (public_inputs_check, evaluate_public_inputs) = if has_public_input_columns {
             let public_inputs_column = public_cols[0].clone(); // asserted to be 1 for the meantime, this will be generalized when required
-            format!(
+            let inputs_check = format!(
                 "
-                FF public_column_evaluation = evaluate_public_input_column(public_inputs, multivariate_challenge);
-                if (public_column_evaluation != claimed_evaluations.{public_inputs_column}) {{
-                    return false;
-                }}
+        FF public_column_evaluation = evaluate_public_input_column(public_inputs, multivariate_challenge);
+        if (public_column_evaluation != claimed_evaluations.{public_inputs_column}) {{
+            return false;
+        }}
                 "
-            )
+            );
+            let evaluate_public_inputs = format!(
+                "
+
+    using FF = {name}Flavor::FF;
+    
+    // Evaluate the given public input column over the multivariate challenge points
+    [[maybe_unused]] FF evaluate_public_input_column(std::vector<FF> points, std::vector<FF> challenges) {{
+        Polynomial<FF> polynomial(points);
+        return polynomial.evaluate_mle(challenges);
+    }}
+                "
+            );
+
+            (inputs_check, evaluate_public_inputs)
         } else {
-            "".to_owned()
+            ("".to_owned(), "".to_owned())
         };
 
         let inverse_commitments = map_with_newline(inverses, wire_transformation);
@@ -91,13 +105,8 @@ impl VerifierBuilder for BBFiles {
         return *this;
     }}
 
-    using FF = {name}Flavor::FF;
+    {evaluate_public_inputs}
 
-    // Evaluate the given public input column over the multivariate challenge points
-    [[maybe_unused]] FF evaluate_public_input_column(std::vector<FF> points, std::vector<FF> challenges) {{
-        Polynomial<FF> polynomial(points);
-        return polynomial.evaluate_mle(challenges);
-    }}
     
     /**
      * @brief This function verifies an {name} Honk proof for given program settings.
