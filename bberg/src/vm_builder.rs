@@ -215,18 +215,27 @@ pub fn extract_public_input_columns(witness_columns: Vec<String>) -> (Vec<String
         .clone()
         .into_iter()
         .map(|name| {
-            if name.ends_with("__is_public") {
-                name.strip_suffix("__is_public")
-                    .map(|s| s.to_owned())
-                    .unwrap() // unwrap checked above
-            } else {
-                name
-            }
+            name
+            // TODO: fix this once the public inputs stuff is added again - information loss breaks the compiler
+            // if name.ends_with("__is_public") {
+            //     name.strip_suffix("__is_public")
+            //         .map(|s| s.to_owned())
+            //         .unwrap() // unwrap checked above
+            // } else {
+            //     name
+            // }
         })
         .collect();
     let public_input_column_names: Vec<String> = witness_columns
         .into_iter()
-        .filter_map(|name| name.strip_suffix("__is_public").map(|s| s.to_owned()))
+        .filter_map(|name| 
+            if name.ends_with("__is_public") {
+                Some(name)
+            } else {None}
+
+            // TODO: fix with above
+            // name.strip_suffix("__is_public").map(|s| s.to_owned())
+        )
         .collect();
 
     assert!(
