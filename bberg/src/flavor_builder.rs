@@ -348,10 +348,10 @@ fn create_proving_and_verification_key(
 
     format!("
         public:
-        class ProvingKey : public ProvingKey_<PrecomputedEntities<Polynomial>, WitnessEntities<Polynomial>, CommitmentKey> {{
+        class ProvingKey : public ProvingKeyAvm_<PrecomputedEntities<Polynomial>, WitnessEntities<Polynomial>, CommitmentKey> {{
             public:
             // Expose constructors on the base class
-            using Base = ProvingKey_<PrecomputedEntities<Polynomial>, WitnessEntities<Polynomial>, CommitmentKey>;
+            using Base = ProvingKeyAvm_<PrecomputedEntities<Polynomial>, WitnessEntities<Polynomial>, CommitmentKey>;
             using Base::Base;
 
             {get_to_be_shifted}
@@ -435,6 +435,14 @@ fn create_polynomial_views(first_poly: &String) -> String {
      */
     template <size_t LENGTH>
     using ProverUnivariates = AllEntities<bb::Univariate<FF, LENGTH>>;
+
+    /**
+     * @brief A container for univariates used during Protogalaxy folding and sumcheck with some of the computation
+     * optmistically ignored
+     * @details During folding and sumcheck, the prover evaluates the relations on these univariates.
+     */
+    template <size_t LENGTH, size_t SKIP_COUNT>
+    using OptimisedProverUnivariates = AllEntities<bb::Univariate<FF, LENGTH, 0, SKIP_COUNT>>;
 
     /**
      * @brief A container for univariates produced during the hot loop in sumcheck.
