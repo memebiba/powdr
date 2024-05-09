@@ -25,7 +25,9 @@ fn circuit_hpp_includes(name: &str, relations: &[String], permutations: &[String
     #pragma once
 
     #include <vector>
+#ifndef __wasm__
     #include <future>
+#endif
 
     #include \"barretenberg/common/constexpr_utils.hpp\"
     #include \"barretenberg/common/throw_or_abort.hpp\"
@@ -88,7 +90,6 @@ impl CircuitBuilder for BBFiles {
                     "auto {relation_name} = [=]() {{
                         return evaluate_relation.template operator()<{name}_vm::{relation_name}<FF>>(\"{relation_name}\", {name}_vm::get_relation_label_{relation_name});
                     }};
-                    relation_futures.emplace_back(std::async(std::launch::async, {relation_name}));
                     ",
                     name = name,
                     relation_name = relation_name
@@ -100,9 +101,26 @@ impl CircuitBuilder for BBFiles {
                     "auto {lookup_name} = [=]() {{
                         return evaluate_logderivative.template operator()<{lookup_name}_relation<FF>>(\"{lookup_name_upper}\");
                     }};
-                    relation_futures.emplace_back(std::async(std::launch::async, {lookup_name}));
                     "
                 )
+        };
+
+        // When we are running natively, we want check circuit to run as futures; however, futures are not supported in wasm, so we must provide an 
+        // alternative codepath that will execute the closures in serial
+        let emplace_future_transformation = |relation_name: &String| {
+            format!(
+                "
+                    relation_futures.emplace_back(std::async(std::launch::async, {relation_name}));
+                "
+            )
+        };
+
+        let execute_serial_transformation = |relation_name: &String| {
+            format!(
+                "
+                    {relation_name}();
+                "
+            )
         };
 
         // Apply transformations
@@ -113,6 +131,14 @@ impl CircuitBuilder for BBFiles {
             map_with_newline(relations, check_circuit_transformation);
         let check_circuit_for_each_lookup =
             map_with_newline(permutations, check_lookup_transformation);
+        
+        // With futures
+        let emplace_future_relations = map_with_newline(relations, emplace_future_transformation);
+        let emplace_future_lookups = map_with_newline(permutations, emplace_future_transformation);
+        
+        // With threads
+        let serial_relations = map_with_newline(relations, execute_serial_transformation);
+        let serial_lookups = map_with_newline(permutations, execute_serial_transformation);
 
         let (params, lookup_check_closure) = if !permutations.is_empty() {
             (get_params(), get_lookup_check_closure())
@@ -124,6 +150,7 @@ impl CircuitBuilder for BBFiles {
         } else {
             "".to_owned()
         };
+
 
         let circuit_hpp = format!("
 {includes}
@@ -177,12 +204,18 @@ class {name}CircuitBuilder {{
 
             {lookup_check_closure}
 
-            // Evaluate check circuit closures as futures
-            std::vector<std::future<bool>> relation_futures;
-
             {check_circuit_for_each_relation}
 
             {check_circuit_for_each_lookup}
+
+#ifndef __wasm__
+
+            // Evaluate check circuit closures as futures
+            std::vector<std::future<bool>> relation_futures;
+
+            {emplace_future_relations}
+            {emplace_future_lookups}
+
 
             // Wait for lookup evaluations to complete
             for (auto& future : relation_futures) {{
@@ -191,6 +224,11 @@ class {name}CircuitBuilder {{
                     return false;
                 }}
             }}
+#else
+            {serial_relations}
+            {serial_lookups}
+
+#endif
 
             return true;
         }}
