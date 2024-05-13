@@ -273,7 +273,7 @@ where
             .into_iter()
             .flat_map(|PolynomialName { name, array_size }| {
 
-                // TODO: hack: add an is_public modifier to the end of a commited polynomial????
+                // hack(https://github.com/AztecProtocol/aztec-packages/issues/6359): add an is_public modifier to the end of a committed polynomial
                 let name = if is_public { format!("{name}__is_public")} else {name};
 
                 self.handle_symbol_definition(
