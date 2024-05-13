@@ -212,29 +212,11 @@ fn get_all_col_names<F: FieldElement>(
 /// This function removes the suffix and collects the columns into their own container
 pub fn extract_public_input_columns(witness_columns: Vec<String>) -> (Vec<String>, Vec<String>) {
     let witness_names: Vec<String> = witness_columns
-        .clone()
-        .into_iter()
-        .map(|name| {
-            name
-            // TODO: fix this once the public inputs stuff is added again - information loss breaks the compiler
-            // if name.ends_with("__is_public") {
-            //     name.strip_suffix("__is_public")
-            //         .map(|s| s.to_owned())
-            //         .unwrap() // unwrap checked above
-            // } else {
-            //     name
-            // }
-        })
-        .collect();
+        .clone();
     let public_input_column_names: Vec<String> = witness_columns
         .into_iter()
-        .filter_map(|name| 
-            if name.ends_with("__is_public") {
-                Some(name)
-            } else {None}
-
-            // TODO: fix with above
-            // name.strip_suffix("__is_public").map(|s| s.to_owned())
+        .filter(|name| 
+            name.ends_with("__is_public")
         )
         .collect();
 
