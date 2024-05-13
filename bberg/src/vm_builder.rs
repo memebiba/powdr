@@ -238,9 +238,5 @@ pub fn extract_public_input_columns(witness_columns: Vec<String>) -> (Vec<String
         )
         .collect();
 
-    assert!(
-        public_input_column_names.len() <= 1,
-        "There should only be one public input column (for now)"
-    );
     (witness_names, public_input_column_names)
 }
