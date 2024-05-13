@@ -109,13 +109,9 @@ where
             PilStatement::PublicDeclaration(start, name, polynomial, array_index, index) => {
                 self.handle_public_declaration(start, name, polynomial, array_index, index)
             }
-            PilStatement::PolynomialConstantDeclaration(start, polynomials) => self
-                .handle_polynomial_declarations(
-                    start,
-                    polynomials,
-                    PolynomialType::Constant,
-                    false,
-                ),
+            PilStatement::PolynomialConstantDeclaration(start, polynomials) => {
+                self.handle_polynomial_declarations(start, polynomials, PolynomialType::Constant, false)
+            }
             PilStatement::PolynomialConstantDefinition(start, name, definition) => self
                 .handle_symbol_definition(
                     start,
@@ -124,19 +120,10 @@ where
                     SymbolKind::Poly(PolynomialType::Constant),
                     Some(definition),
                 ),
-            PilStatement::PolynomialCommitDeclaration(start, polynomials, None, is_public) => self
-                .handle_polynomial_declarations(
-                    start,
-                    polynomials,
-                    PolynomialType::Committed,
-                    is_public,
-                ),
-            PilStatement::PolynomialCommitDeclaration(
-                start,
-                mut polynomials,
-                Some(definition),
-                _,
-            ) => {
+            PilStatement::PolynomialCommitDeclaration(start, polynomials, None, is_public) => {
+                self.handle_polynomial_declarations(start, polynomials, PolynomialType::Committed, is_public)
+            }
+            PilStatement::PolynomialCommitDeclaration(start, mut polynomials, Some(definition), _) => {
                 assert!(polynomials.len() == 1);
                 let name = polynomials.pop().unwrap();
                 self.handle_symbol_definition(
@@ -285,12 +272,9 @@ where
         polynomials
             .into_iter()
             .flat_map(|PolynomialName { name, array_size }| {
-                // TODO: hack: add an is_public modifier to the end of a commited polynomial????
-                let name = if is_public {
-                    format!("{name}__is_public")
-                } else {
-                    name
-                };
+
+                // hack(https://github.com/AztecProtocol/aztec-packages/issues/6359): add an is_public modifier to the end of a committed polynomial
+                let name = if is_public { format!("{name}__is_public")} else {name};
 
                 self.handle_symbol_definition(
                     start,
