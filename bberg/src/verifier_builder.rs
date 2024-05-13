@@ -196,7 +196,6 @@ impl VerifierBuilder for BBFiles {
         let include_str = include_hpp(&snake_case(name));
 
         // If there are public input columns, then the generated verifier must take them in as an argument for the verify_proof
-        // TODO: cleanup
         let verify_proof = if !public_cols.is_empty() {
             "bool verify_proof(const HonkProof& proof, const std::vector<FF>& public_inputs);"
                 .to_string()
