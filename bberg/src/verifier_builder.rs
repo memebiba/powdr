@@ -78,7 +78,7 @@ impl VerifierBuilder for BBFiles {
     // Evaluate the given public input column over the multivariate challenge points
     [[maybe_unused]] inline FF evaluate_public_input_column(std::vector<FF> points, const size_t circuit_size, std::vector<FF> challenges) {{
         
-        // TODO: we pad the points to the circuit size in order to get the correct evaluation
+        // TODO(https://github.com/AztecProtocol/aztec-packages/issues/6361): we pad the points to the circuit size in order to get the correct evaluation
         // This is not efficient, and will not be valid in production
         std::vector<FF> new_points(circuit_size, 0);
         std::copy(points.begin(), points.end(), new_points.data());
@@ -211,7 +211,6 @@ impl VerifierBuilder for BBFiles {
         let include_str = include_hpp(&snake_case(name));
 
         // If there are public input columns, then the generated verifier must take them in as an argument for the verify_proof
-        // TODO: cleanup
         let verify_proof = if !public_cols.is_empty() {
             "bool verify_proof(const HonkProof& proof, const std::vector<std::vector<FF>>& public_inputs);"
                 .to_string()
