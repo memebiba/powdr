@@ -140,14 +140,6 @@ impl CircuitBuilder for BBFiles {
         let serial_relations = map_with_newline(relations, execute_serial_transformation);
         let serial_lookups = map_with_newline(permutations, execute_serial_transformation);
 
-        // With futures
-        let emplace_future_relations = map_with_newline(relations, emplace_future_transformation);
-        let emplace_future_lookups = map_with_newline(permutations, emplace_future_transformation);
-
-        // With threads
-        let serial_relations = map_with_newline(relations, execute_serial_transformation);
-        let serial_lookups = map_with_newline(permutations, execute_serial_transformation);
-
         let (params, lookup_check_closure) = if !permutations.is_empty() {
             (get_params(), get_lookup_check_closure())
         } else {

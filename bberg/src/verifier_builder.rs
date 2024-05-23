@@ -67,7 +67,7 @@ impl VerifierBuilder for BBFiles {
             let inputs_check = public_cols
                 .iter()
                 .enumerate()
-                .map(|(i, col_name)| public_inputs_column_transformation(&col_name, i))
+                .map(|(i, col_name)| public_inputs_column_transformation(col_name, i))
                 .collect::<String>();
 
             let evaluate_public_inputs = format!(
