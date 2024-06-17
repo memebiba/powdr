@@ -152,30 +152,35 @@ impl PILAnalyzer {
     /// Adds core types if they are not present in the input.
     /// These need to be present because the type checker relies on them.
     fn core_types_if_not_present(&self) -> Option<PILFile> {
+        // TODO(md): check on this
+
         // We are extracting some specific symbols from the prelude file.
-        let prelude = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../std/prelude.asm"));
-        let missing_symbols = ["Constr", "Option"]
-            .into_iter()
-            .filter(|symbol| {
-                !self
-                    .known_symbols
-                    .contains_key(&format!("std::prelude::{symbol}"))
-            })
-            .collect::<Vec<_>>();
-        (!missing_symbols.is_empty()).then(|| {
-            let module = parse_module(None, prelude).unwrap();
-            let missing_symbols = module
-                .statements
-                .into_iter()
-                .filter_map(|s| match s {
-                    ModuleStatement::SymbolDefinition(s) => missing_symbols
-                        .contains(&s.name.as_str())
-                        .then_some(format!("{s}")),
-                })
-                .join("\n");
-            parse(None, &format!("namespace std::prelude;\n{missing_symbols}")).unwrap()
-        })
+        // let prelude = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../std/prelude.asm"));
+        // let missing_symbols = ["Constr", "Option"]
+        //     .into_iter()
+        //     .filter(|symbol| {
+        //         !self
+        //             .known_symbols
+        //             .contains_key(&format!("std::prelude::{symbol}"))
+        //     })
+        //     .collect::<Vec<_>>();
+        // (!missing_symbols.is_empty()).then(|| {
+        //     let module = parse_module(None, prelude).unwrap();
+        //     let missing_symbols = module
+        //         .statements
+        //         .into_iter()
+        //         .filter_map(|s| match s {
+        //             ModuleStatement::SymbolDefinition(s) => missing_symbols
+        //                 .contains(&s.name.as_str())
+        //                 .then_some(format!("{s}")),
+        //         })
+        //         .join("\n");
+        //     parse(None, &format!("namespace std::prelude;\n{missing_symbols}")).unwrap()
+        // })
+        
+        None
     }
+    
 
     /// Check that query and constr functions are used in the correct contexts.
     pub fn side_effect_check(&self) {
