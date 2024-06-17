@@ -199,6 +199,7 @@ mod test {
                         end: 25,
                     },
                     None,
+                    None,
                     vec![PolynomialName {
                         name: "t".to_string(),
                         array_size: None
@@ -223,6 +224,7 @@ mod test {
                     start: 0,
                     end: 6,
                 },
+                None,
                 SelectedExpressions {
                     selector: None,
                     expressions: vec![direct_reference("f")]

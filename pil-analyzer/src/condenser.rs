@@ -175,6 +175,7 @@ pub struct Condenser<'a, T> {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdentityWithoutID<Expr> {
     pub kind: IdentityKind,
+    pub attribute: Option<String>,
     pub source: SourceRef,
     /// For a simple polynomial identity, the selector contains
     /// the actual expression (see expression_for_poly_id).
@@ -184,9 +185,12 @@ pub struct IdentityWithoutID<Expr> {
 
 impl<Expr> IdentityWithoutID<Expr> {
     /// Constructs an Identity from a polynomial identity (expression assumed to be identical zero).
-    pub fn from_polynomial_identity(source: SourceRef, identity: Expr) -> Self {
+    pub fn from_polynomial_identity(source: SourceRef, identity: Expr, attribute: Option<String>) -> Self {
+        println!("IdentityWithoutID::from_polynomial_identity");
         Self {
             kind: IdentityKind::Polynomial,
+            // TODO(md): something here to pass in the attr
+            attribute,
             source,
             left: SelectedExpressions {
                 selector: Some(identity),
@@ -199,6 +203,7 @@ impl<Expr> IdentityWithoutID<Expr> {
     pub fn into_identity(self, id: u64) -> Identity<Expr> {
         Identity {
             id,
+            attribute: self.attribute,
             kind: self.kind,
             source: self.source,
             left: self.left,
@@ -243,7 +248,7 @@ impl<'a, T: FieldElement> Condenser<'a, T> {
                         assert!(items.is_empty());
                         Ok(())
                     } else {
-                        self.add_constraints(expr, identity.source.clone())
+                        self.add_constraints(expr, identity.source.clone(), identity.attribute.clone())
                     }
                 })
                 .unwrap_or_else(|err| {
@@ -256,6 +261,7 @@ impl<'a, T: FieldElement> Condenser<'a, T> {
             let right = self.condense_selected_expressions(&identity.right);
             self.new_constraints.push(IdentityWithoutID {
                 kind: identity.kind,
+                attribute: identity.attribute.clone(),
                 source: identity.source.clone(),
                 left,
                 right,
@@ -387,17 +393,19 @@ impl<'a, T: FieldElement> SymbolLookup<'a, T> for Condenser<'a, T> {
         &mut self,
         constraints: Arc<Value<'a, T>>,
         source: SourceRef,
+        attribute: Option<String>,
     ) -> Result<(), EvalError> {
+        println!("Condenser::add_constraints");
         match constraints.as_ref() {
             Value::Array(items) => {
                 for item in items {
                     self.new_constraints
-                        .push(to_constraint(item, source.clone()))
+                        .push(to_constraint(item, source.clone(), attribute.clone()))
                 }
             }
             _ => self
                 .new_constraints
-                .push(to_constraint(&constraints, source)),
+                .push(to_constraint(&constraints, source, attribute.clone())),
         }
         Ok(())
     }
@@ -419,6 +427,7 @@ impl<'a, T: FieldElement> Condenser<'a, T> {
 fn to_constraint<T: FieldElement>(
     constraint: &Value<'_, T>,
     source: SourceRef,
+    attribute: Option<String>,
 ) -> IdentityWithoutID<AlgebraicExpression<T>> {
     match constraint {
         Value::Enum("Identity", Some(fields)) => {
@@ -426,6 +435,7 @@ fn to_constraint<T: FieldElement>(
             IdentityWithoutID::from_polynomial_identity(
                 source,
                 to_expr(&fields[0]) - to_expr(&fields[1]),
+                attribute
             )
         }
         Value::Enum(kind @ "Lookup" | kind @ "Permutation", Some(fields)) => {
@@ -460,6 +470,7 @@ fn to_constraint<T: FieldElement>(
 
             IdentityWithoutID {
                 kind,
+                attribute: None,
                 source,
                 left: to_selected_exprs(sel_from, from),
                 right: to_selected_exprs(sel_to, to),
@@ -485,6 +496,7 @@ fn to_constraint<T: FieldElement>(
 
             IdentityWithoutID {
                 kind: IdentityKind::Connect,
+                attribute: None,
                 source,
                 left: SelectedExpressions {
                     selector: None,

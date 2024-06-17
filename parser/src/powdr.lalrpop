@@ -177,13 +177,15 @@ ArrayLiteralTerm: ArrayExpression = {
 }
 
 PolynomialCommitDeclaration: PilStatement = {
-    <start:@L> PolCol CommitWitness <stage:Stage?> <list:PolynomialNameList> <end:@R> ";" => PilStatement::PolynomialCommitDeclaration(ctx.source_ref(start, end), stage, list, None),
+    <start:@L> PolCol "public" "(" <n:Number> ")" <stage:Stage?> <name:PolynomialName> <end:@R> ";" => PilStatement::PolynomialCommitDeclaration(ctx.source_ref(start, end), stage, vec![name], None, Some(usize::try_from(n).unwrap())),
+    <start:@L> PolCol CommitWitness <stage:Stage?> <list:PolynomialNameList> <end:@R> ";" => PilStatement::PolynomialCommitDeclaration(ctx.source_ref(start, end), stage, list, None, None),
     <start:@L> PolCol CommitWitness <stage:Stage?> <name:PolynomialName> "(" <params:ParameterList> ")" "query" <body:BoxedExpression> <end:@R> ";"
      => PilStatement::PolynomialCommitDeclaration(
         ctx.source_ref(start, end),
         stage,
         vec![name],
-        Some(FunctionDefinition::Expression(Expression::LambdaExpression(ctx.source_ref(start, end), LambdaExpression{kind: FunctionKind::Query, params, body})))
+        Some(FunctionDefinition::Expression(Expression::LambdaExpression(ctx.source_ref(start, end), LambdaExpression{kind: FunctionKind::Query, params, body}))),
+        None
     )
 }
 
@@ -199,12 +201,16 @@ PolynomialName: PolynomialName = {
     <name:Identifier> <array_size:( "[" <Expression> "]" )?> => PolynomialName{<>}
 }
 
+Attribute: String = {
+    "#[" <Identifier> "]" => <>.to_string()
+}
+
 PlookupIdentityStatement: PilStatement = {
     <PlookupIdentity> ";"
 }
 
 PlookupIdentity: PilStatement = {
-    <start:@L> <se1:SelectedExpressions> "in" <se2:SelectedExpressions> <end:@R> => PilStatement::PlookupIdentity(ctx.source_ref(start, end), se1, se2)
+    <start:@L> <attr:Attribute?> <se1:SelectedExpressions> "in" <se2:SelectedExpressions> <end:@R> => PilStatement::PlookupIdentity(ctx.source_ref(start, end), attr, se1, se2)
 }
 
 SelectedExpressions: SelectedExpressions<Expression> = {
@@ -217,7 +223,7 @@ PermutationIdentityStatement: PilStatement = {
 }
 
 PermutationIdentity: PilStatement = {
-    <start:@L> <se1:SelectedExpressions> "is" <se2:SelectedExpressions> <end:@R> => PilStatement::PermutationIdentity(ctx.source_ref(start, end), se1, se2)
+    <start:@L> <attr:Attribute?> <se1:SelectedExpressions> "is" <se2:SelectedExpressions> <end:@R> => PilStatement::PermutationIdentity(ctx.source_ref(start, end), attr, se1, se2)
 }
 
 ConnectIdentityStatement: PilStatement = {
@@ -233,7 +239,7 @@ ExpressionStatement: PilStatement = {
 }
 
 ExpressionStatementWithoutSemicolon: PilStatement = {
-    <start:@L> <expr:Expression> <end:@R> => PilStatement::Expression(ctx.source_ref(start, end), expr)
+    <start:@L> <attr:Attribute?> <expr:Expression> <end:@R> => PilStatement::Expression(ctx.source_ref(start, end), attr, expr)
 }
 
 PolCol = {

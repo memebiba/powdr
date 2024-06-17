@@ -131,7 +131,8 @@ where
                     Some(Type::Col.into()),
                     Some(definition),
                 ),
-            PilStatement::PolynomialCommitDeclaration(source, stage, polynomials, None) => self
+            // TODO(md): could be wrong
+            PilStatement::PolynomialCommitDeclaration(source, stage, polynomials, None, None) => self
                 .handle_polynomial_declarations(
                     source,
                     stage,
@@ -143,6 +144,7 @@ where
                 stage,
                 mut polynomials,
                 Some(definition),
+                None,
             ) => {
                 assert!(polynomials.len() == 1);
                 let (name, ty) =
@@ -308,9 +310,10 @@ where
     }
 
     fn handle_identity_statement(&mut self, statement: PilStatement) -> Vec<PILItem> {
-        let (source, kind, left, right) = match statement {
-            PilStatement::Expression(source, expression) => (
+        let (source, attribute, kind, left, right) = match statement {
+            PilStatement::Expression(source, attr, expression) => (
                 source,
+                attr,
                 IdentityKind::Polynomial,
                 SelectedExpressions {
                     selector: Some(
@@ -321,16 +324,18 @@ where
                 },
                 SelectedExpressions::default(),
             ),
-            PilStatement::PlookupIdentity(source, key, haystack) => (
+            PilStatement::PlookupIdentity(source, attr, key, haystack) => (
                 source,
+                attr,
                 IdentityKind::Plookup,
                 self.expression_processor(&Default::default())
                     .process_selected_expressions(key),
                 self.expression_processor(&Default::default())
                     .process_selected_expressions(haystack),
             ),
-            PilStatement::PermutationIdentity(source, left, right) => (
+            PilStatement::PermutationIdentity(source, attr, left, right) => (
                 source,
+                attr,
                 IdentityKind::Permutation,
                 self.expression_processor(&Default::default())
                     .process_selected_expressions(left),
@@ -339,6 +344,7 @@ where
             ),
             PilStatement::ConnectIdentity(source, left, right) => (
                 source,
+                None,
                 IdentityKind::Connect,
                 SelectedExpressions {
                     selector: None,
@@ -359,8 +365,11 @@ where
             }
         };
 
+        println!("ATTR IN STATEMENT PROCESSOR {attribute:?}");
+
         vec![PILItem::Identity(Identity {
             id: self.counters.dispense_identity_id(),
+            attribute,
             kind,
             source,
             left,

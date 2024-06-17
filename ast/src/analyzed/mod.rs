@@ -418,6 +418,7 @@ pub fn type_from_definition(
             FunctionValueDefinition::TypeConstructor(enum_decl, variant) => {
                 Some(variant.constructor_type(enum_decl))
             }
+            FunctionValueDefinition::Number(_) => Some(Type::Int.into()),
         }
     } else {
         assert!(
@@ -515,6 +516,7 @@ pub enum FunctionValueDefinition {
     Expression(TypedExpression),
     TypeDeclaration(EnumDeclaration),
     TypeConstructor(Arc<EnumDeclaration>, EnumVariant),
+    Number(usize),
 }
 
 impl Children<Expression> for FunctionValueDefinition {
@@ -530,6 +532,7 @@ impl Children<Expression> for FunctionValueDefinition {
                 enum_declaration.children()
             }
             FunctionValueDefinition::TypeConstructor(_, variant) => variant.children(),
+            FunctionValueDefinition::Number(_) => Box::new(iter::empty()),
         }
     }
 
@@ -545,6 +548,7 @@ impl Children<Expression> for FunctionValueDefinition {
                 enum_declaration.children_mut()
             }
             FunctionValueDefinition::TypeConstructor(_, variant) => variant.children_mut(),
+            FunctionValueDefinition::Number(_) => Box::new(iter::empty()),
         }
     }
 }
@@ -629,6 +633,8 @@ impl PublicDeclaration {
 pub struct Identity<Expr> {
     /// The ID is globally unique among identities.
     pub id: u64,
+    // An attribute used to attach debug information to a polynomial
+    pub attribute: Option<String>,
     pub kind: IdentityKind,
     pub source: SourceRef,
     /// For a simple polynomial identity, the selector contains
@@ -642,6 +648,7 @@ impl<Expr> Identity<Expr> {
     pub fn from_polynomial_identity(id: u64, source: SourceRef, identity: Expr) -> Self {
         Identity {
             id,
+            attribute: None,
             kind: IdentityKind::Polynomial,
             source,
             left: SelectedExpressions {
@@ -755,6 +762,7 @@ pub struct AlgebraicReference {
     /// Comparisons are based on polynomial ID.
     /// In case of an array element, this ends in `[i]`.
     pub name: String,
+
     /// Identifier for a polynomial reference, already contains
     /// the element offset in case of an array element.
     pub poly_id: PolyID,

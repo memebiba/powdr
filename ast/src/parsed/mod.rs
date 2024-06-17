@@ -87,21 +87,25 @@ pub enum PilStatement {
         Vec<PolynomialName>,
         // Value (prover query / hint)
         Option<FunctionDefinition>,
+        // public index
+        Option<usize>
     ),
     PlookupIdentity(
         SourceRef,
+        Option<String>,
         SelectedExpressions<Expression>,
         SelectedExpressions<Expression>,
     ),
     PermutationIdentity(
         SourceRef,
+        Option<String>,
         SelectedExpressions<Expression>,
         SelectedExpressions<Expression>,
     ),
     ConnectIdentity(SourceRef, Vec<Expression>, Vec<Expression>),
     ConstantDefinition(SourceRef, String, Expression),
     EnumDeclaration(SourceRef, EnumDeclaration<Expression>),
-    Expression(SourceRef, Expression),
+    Expression(SourceRef, Option<String>, Expression),
 }
 
 impl PilStatement {
@@ -139,7 +143,7 @@ impl PilStatement {
                 ),
             ),
             PilStatement::PolynomialConstantDeclaration(_, polynomials)
-            | PilStatement::PolynomialCommitDeclaration(_, _, polynomials, _) => Box::new(
+            | PilStatement::PolynomialCommitDeclaration(_, _, polynomials, _, _) => Box::new(
                 polynomials
                     .iter()
                     .map(|p| (&p.name, None, SymbolCategory::Value)),
@@ -147,10 +151,10 @@ impl PilStatement {
 
             PilStatement::Include(_, _)
             | PilStatement::Namespace(_, _, _)
-            | PilStatement::PlookupIdentity(_, _, _)
-            | PilStatement::PermutationIdentity(_, _, _)
+            | PilStatement::PlookupIdentity(_, _, _, _)
+            | PilStatement::PermutationIdentity(_, _, _, _)
             | PilStatement::ConnectIdentity(_, _, _)
-            | PilStatement::Expression(_, _) => Box::new(empty()),
+            | PilStatement::Expression(_,_, _) => Box::new(empty()),
         }
     }
 }
@@ -159,14 +163,14 @@ impl Children<Expression> for PilStatement {
     /// Returns an iterator over all (top-level) expressions in this statement.
     fn children(&self) -> Box<dyn Iterator<Item = &Expression> + '_> {
         match self {
-            PilStatement::PlookupIdentity(_, left, right)
-            | PilStatement::PermutationIdentity(_, left, right) => {
+            PilStatement::PlookupIdentity(_, _, left, right)
+            | PilStatement::PermutationIdentity(_, _, left, right) => {
                 Box::new(left.children().chain(right.children()))
             }
             PilStatement::ConnectIdentity(_start, left, right) => {
                 Box::new(left.iter().chain(right.iter()))
             }
-            PilStatement::Expression(_, e)
+            PilStatement::Expression(_, _, e)
             | PilStatement::Namespace(_, _, Some(e))
             | PilStatement::PolynomialDefinition(_, _, e)
             | PilStatement::ConstantDefinition(_, _, e) => Box::new(once(e)),
@@ -183,8 +187,8 @@ impl Children<Expression> for PilStatement {
             PilStatement::PublicDeclaration(_, _, _, i, e) => Box::new(i.iter().chain(once(e))),
 
             PilStatement::PolynomialConstantDefinition(_, _, def)
-            | PilStatement::PolynomialCommitDeclaration(_, _, _, Some(def)) => def.children(),
-            PilStatement::PolynomialCommitDeclaration(_, _, _, None)
+            | PilStatement::PolynomialCommitDeclaration(_, _, _, Some(def), _) => def.children(),
+            PilStatement::PolynomialCommitDeclaration(_, _, _, None, _,)
             | PilStatement::Include(_, _)
             | PilStatement::Namespace(_, _, None)
             | PilStatement::PolynomialConstantDeclaration(_, _) => Box::new(empty()),
@@ -194,14 +198,14 @@ impl Children<Expression> for PilStatement {
     /// Returns an iterator over all (top-level) expressions in this statement.
     fn children_mut(&mut self) -> Box<dyn Iterator<Item = &mut Expression> + '_> {
         match self {
-            PilStatement::PlookupIdentity(_, left, right)
-            | PilStatement::PermutationIdentity(_, left, right) => {
+            PilStatement::PlookupIdentity(_, _, left, right)
+            | PilStatement::PermutationIdentity(_, _, left, right) => {
                 Box::new(left.children_mut().chain(right.children_mut()))
             }
             PilStatement::ConnectIdentity(_start, left, right) => {
                 Box::new(left.iter_mut().chain(right.iter_mut()))
             }
-            PilStatement::Expression(_, e)
+            PilStatement::Expression(_, _,e)
             | PilStatement::Namespace(_, _, Some(e))
             | PilStatement::PolynomialDefinition(_, _, e)
             | PilStatement::ConstantDefinition(_, _, e) => Box::new(once(e)),
@@ -215,8 +219,8 @@ impl Children<Expression> for PilStatement {
             PilStatement::PublicDeclaration(_, _, _, i, e) => Box::new(i.iter_mut().chain(once(e))),
 
             PilStatement::PolynomialConstantDefinition(_, _, def)
-            | PilStatement::PolynomialCommitDeclaration(_, _, _, Some(def)) => def.children_mut(),
-            PilStatement::PolynomialCommitDeclaration(_, _, _, None)
+            | PilStatement::PolynomialCommitDeclaration(_, _, _, Some(def), _) => def.children_mut(),
+            PilStatement::PolynomialCommitDeclaration(_, _, _, None, _)
             | PilStatement::Include(_, _)
             | PilStatement::Namespace(_, _, None)
             | PilStatement::PolynomialConstantDeclaration(_, _) => Box::new(empty()),

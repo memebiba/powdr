@@ -20,12 +20,12 @@ pub fn pil_statement_clear_source_ref(stmt: &mut PilStatement) {
         | PilStatement::PublicDeclaration(s, _, _, _, _)
         | PilStatement::PolynomialConstantDeclaration(s, _)
         | PilStatement::PolynomialConstantDefinition(s, _, _)
-        | PilStatement::PolynomialCommitDeclaration(s, _, _, _)
-        | PilStatement::PlookupIdentity(s, _, _)
-        | PilStatement::PermutationIdentity(s, _, _)
+        | PilStatement::PolynomialCommitDeclaration(s, _, _, _, _)
+        | PilStatement::PlookupIdentity(s, _, _, _)
+        | PilStatement::PermutationIdentity(s, _, _, _)
         | PilStatement::ConnectIdentity(s, _, _)
         | PilStatement::ConstantDefinition(s, _, _)
-        | PilStatement::Expression(s, _)
+        | PilStatement::Expression(s, _,_)
         | PilStatement::EnumDeclaration(s, _) => *s = SourceRef::unknown(),
     }
 }
