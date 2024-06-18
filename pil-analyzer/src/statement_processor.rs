@@ -112,6 +112,7 @@ where
                     None,
                     Some(Type::Expr.into()),
                     Some(FunctionDefinition::Expression(value)),
+                    None
                 ),
             PilStatement::PublicDeclaration(source, name, polynomial, array_index, index) => {
                 self.handle_public_declaration(source, name, polynomial, array_index, index)
@@ -132,6 +133,7 @@ where
                     None,
                     Some(Type::Col.into()),
                     Some(definition),
+                    None
                 ),
             PilStatement::PolynomialCommitDeclaration(source, stage, polynomials, None, public_info) => self
                 .handle_polynomial_declarations(
@@ -159,6 +161,7 @@ where
                     stage,
                     ty.map(Into::into),
                     Some(definition),
+                    None,
                 )
             }
             PilStatement::ConstantDefinition(source, name, value) => self.handle_symbol_definition(
@@ -168,6 +171,7 @@ where
                 None,
                 Some(Type::Fe.into()),
                 Some(FunctionDefinition::Expression(value)),
+                None
             ),
             PilStatement::LetStatement(source, name, type_scheme, value) => {
                 self.handle_generic_definition(source, name, type_scheme, value)
@@ -182,6 +186,7 @@ where
                     Some(FunctionDefinition::TypeDeclaration(
                         enum_declaration.clone(),
                     )),
+                    None
                 ),
             _ => self.handle_identity_statement(statement),
         }
@@ -271,6 +276,7 @@ where
                     None,
                     Some(ty.into()),
                     None,
+                    None,
                 )
             }
             Some(value) => {
@@ -286,6 +292,7 @@ where
                     None,
                     type_scheme,
                     Some(FunctionDefinition::Expression(value)),
+                    None
                 )
             }
         }
@@ -385,7 +392,7 @@ where
         stage: Option<u32>,
         polynomials: Vec<PolynomialName>,
         polynomial_type: PolynomialType,
-        public_info: Option<usize>
+        public_info: Option<u32>
     ) -> Vec<PILItem> {
         if public_info.is_some() {
             assert!(polynomials.len() == 1);
@@ -394,18 +401,15 @@ where
             .into_iter()
             .flat_map(|poly_name| {
                 let (name, ty) = self.name_and_type_from_polynomial_name(poly_name);
-                let value = if let Some(idx) = public_info {
-                    Some(FunctionDefinition::Number(idx))
-                } else {
-                    None
-                };
+
                 self.handle_symbol_definition(
                     source.clone(),
                     name,
                     SymbolKind::Poly(polynomial_type),
                     stage,
                     ty.map(Into::into),
-                    value,
+                    None,
+                    public_info
                 )
             })
             .collect()
@@ -419,6 +423,7 @@ where
         stage: Option<u32>,
         type_scheme: Option<TypeScheme>,
         value: Option<FunctionDefinition>,
+        public_info: Option<u32>,
     ) -> Vec<PILItem> {
         let length = type_scheme.as_ref().and_then(|t| {
             if symbol_kind == SymbolKind::Other() {
@@ -478,17 +483,9 @@ where
         }
 
         let value = value.map(|v| match v {
-            FunctionDefinition::Number(idx) => {
-                let num = BigUint::from(idx);
-                let typ: Option<TypeScheme> = Some(Type::Fe.into());
-                FunctionValueDefinition::Number(TypedExpression {
-                    e: num.into(),
-                    type_scheme: typ,
-                })
-            } ,
             FunctionDefinition::Expression(expr) => {
                 if symbol_kind == SymbolKind::Poly(PolynomialType::Committed) {
-                    // The only allowed value for a witness column is a query function.
+                    // The only allowed value for a witness column is a query function
                     assert!(matches!(
                         expr,
                         parsed::Expression::LambdaExpression(
