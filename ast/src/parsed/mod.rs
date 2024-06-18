@@ -87,8 +87,8 @@ pub enum PilStatement {
         Vec<PolynomialName>,
         // Value (prover query / hint)
         Option<FunctionDefinition>,
-        // public index
-        Option<usize>
+        // is public
+        bool,
     ),
     PlookupIdentity(
         SourceRef,
@@ -154,7 +154,7 @@ impl PilStatement {
             | PilStatement::PlookupIdentity(_, _, _, _)
             | PilStatement::PermutationIdentity(_, _, _, _)
             | PilStatement::ConnectIdentity(_, _, _)
-            | PilStatement::Expression(_,_, _) => Box::new(empty()),
+            | PilStatement::Expression(_, _, _) => Box::new(empty()),
         }
     }
 }
@@ -188,7 +188,7 @@ impl Children<Expression> for PilStatement {
 
             PilStatement::PolynomialConstantDefinition(_, _, def)
             | PilStatement::PolynomialCommitDeclaration(_, _, _, Some(def), _) => def.children(),
-            PilStatement::PolynomialCommitDeclaration(_, _, _, None, _,)
+            PilStatement::PolynomialCommitDeclaration(_, _, _, None, _)
             | PilStatement::Include(_, _)
             | PilStatement::Namespace(_, _, None)
             | PilStatement::PolynomialConstantDeclaration(_, _) => Box::new(empty()),
@@ -205,7 +205,7 @@ impl Children<Expression> for PilStatement {
             PilStatement::ConnectIdentity(_start, left, right) => {
                 Box::new(left.iter_mut().chain(right.iter_mut()))
             }
-            PilStatement::Expression(_, _,e)
+            PilStatement::Expression(_, _, e)
             | PilStatement::Namespace(_, _, Some(e))
             | PilStatement::PolynomialDefinition(_, _, e)
             | PilStatement::ConstantDefinition(_, _, e) => Box::new(once(e)),
@@ -219,7 +219,9 @@ impl Children<Expression> for PilStatement {
             PilStatement::PublicDeclaration(_, _, _, i, e) => Box::new(i.iter_mut().chain(once(e))),
 
             PilStatement::PolynomialConstantDefinition(_, _, def)
-            | PilStatement::PolynomialCommitDeclaration(_, _, _, Some(def), _) => def.children_mut(),
+            | PilStatement::PolynomialCommitDeclaration(_, _, _, Some(def), _) => {
+                def.children_mut()
+            }
             PilStatement::PolynomialCommitDeclaration(_, _, _, None, _)
             | PilStatement::Include(_, _)
             | PilStatement::Namespace(_, _, None)

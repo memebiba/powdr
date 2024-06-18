@@ -158,6 +158,7 @@ fn format_poly(
     let kind = match &poly_type {
         PolynomialType::Committed => "witness ",
         PolynomialType::Constant => "fixed ",
+        PolynomialType::Public => "public ",
         PolynomialType::Intermediate => panic!(),
     };
     let stage = symbol
@@ -224,7 +225,7 @@ impl Display for FunctionValueDefinition {
             }
             FunctionValueDefinition::TypeDeclaration(_)
             // TODO(md)
-            | FunctionValueDefinition::TypeConstructor(_, _) | FunctionValueDefinition::Number(_) => {
+            | FunctionValueDefinition::TypeConstructor(_, _) => {
                 panic!("Should not use this formatting function.")
             }
         }

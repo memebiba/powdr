@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashSet};
-use std::f32::consts::E;
+
 use std::iter;
 use std::sync::Arc;
 
@@ -13,7 +13,7 @@ use powdr_ast::parsed::{
     SelectedExpressions,
 };
 use powdr_ast::parsed::{FunctionKind, LambdaExpression};
-use powdr_number::{BigUint, DegreeType};
+use powdr_number::{DegreeType};
 use powdr_parser_util::SourceRef;
 
 use powdr_ast::analyzed::{
@@ -44,6 +44,7 @@ impl Default for Counters {
             symbol_counters: [
                 SymbolKind::Poly(PolynomialType::Committed),
                 SymbolKind::Poly(PolynomialType::Constant),
+                SymbolKind::Poly(PolynomialType::Public),
                 SymbolKind::Poly(PolynomialType::Intermediate),
                 SymbolKind::Constant(),
                 SymbolKind::Other(),
@@ -112,7 +113,6 @@ where
                     None,
                     Some(Type::Expr.into()),
                     Some(FunctionDefinition::Expression(value)),
-                    None
                 ),
             PilStatement::PublicDeclaration(source, name, polynomial, array_index, index) => {
                 self.handle_public_declaration(source, name, polynomial, array_index, index)
@@ -123,7 +123,6 @@ where
                     None,
                     polynomials,
                     PolynomialType::Constant,
-                    None,
                 ),
             PilStatement::PolynomialConstantDefinition(source, name, definition) => self
                 .handle_symbol_definition(
@@ -133,22 +132,29 @@ where
                     None,
                     Some(Type::Col.into()),
                     Some(definition),
-                    None
                 ),
-            PilStatement::PolynomialCommitDeclaration(source, stage, polynomials, None, public_info) => self
-                .handle_polynomial_declarations(
+            PilStatement::PolynomialCommitDeclaration(source, stage, polynomials, None, true) => {
+                self.handle_polynomial_declarations(
+                    source,
+                    stage,
+                    polynomials,
+                    PolynomialType::Public,
+                )
+            }
+            PilStatement::PolynomialCommitDeclaration(source, stage, polynomials, None, false) => {
+                self.handle_polynomial_declarations(
                     source,
                     stage,
                     polynomials,
                     PolynomialType::Committed,
-                    public_info
-                ),
+                )
+            }
             PilStatement::PolynomialCommitDeclaration(
                 source,
                 stage,
                 mut polynomials,
                 Some(definition),
-                None,
+                false,
             ) => {
                 assert!(polynomials.len() == 1);
                 let (name, ty) =
@@ -161,7 +167,6 @@ where
                     stage,
                     ty.map(Into::into),
                     Some(definition),
-                    None,
                 )
             }
             PilStatement::ConstantDefinition(source, name, value) => self.handle_symbol_definition(
@@ -171,7 +176,6 @@ where
                 None,
                 Some(Type::Fe.into()),
                 Some(FunctionDefinition::Expression(value)),
-                None
             ),
             PilStatement::LetStatement(source, name, type_scheme, value) => {
                 self.handle_generic_definition(source, name, type_scheme, value)
@@ -186,7 +190,6 @@ where
                     Some(FunctionDefinition::TypeDeclaration(
                         enum_declaration.clone(),
                     )),
-                    None
                 ),
             _ => self.handle_identity_statement(statement),
         }
@@ -276,7 +279,6 @@ where
                     None,
                     Some(ty.into()),
                     None,
-                    None,
                 )
             }
             Some(value) => {
@@ -292,7 +294,6 @@ where
                     None,
                     type_scheme,
                     Some(FunctionDefinition::Expression(value)),
-                    None
                 )
             }
         }
@@ -392,11 +393,7 @@ where
         stage: Option<u32>,
         polynomials: Vec<PolynomialName>,
         polynomial_type: PolynomialType,
-        public_info: Option<u32>
     ) -> Vec<PILItem> {
-        if public_info.is_some() {
-            assert!(polynomials.len() == 1);
-        }
         polynomials
             .into_iter()
             .flat_map(|poly_name| {
@@ -409,7 +406,6 @@ where
                     stage,
                     ty.map(Into::into),
                     None,
-                    public_info
                 )
             })
             .collect()
@@ -423,7 +419,6 @@ where
         stage: Option<u32>,
         type_scheme: Option<TypeScheme>,
         value: Option<FunctionDefinition>,
-        public_info: Option<u32>,
     ) -> Vec<PILItem> {
         let length = type_scheme.as_ref().and_then(|t| {
             if symbol_kind == SymbolKind::Other() {
@@ -523,6 +518,7 @@ where
             }
             FunctionDefinition::TypeDeclaration(_enum_declaration) => unreachable!(),
         });
+
         vec![PILItem::Definition(symbol, value)]
     }
 

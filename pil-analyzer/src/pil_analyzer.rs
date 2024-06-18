@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use itertools::Itertools;
 use powdr_ast::parsed::asm::{
-    parse_absolute_path, AbsoluteSymbolPath, ModuleStatement, SymbolPath,
+    parse_absolute_path, AbsoluteSymbolPath, SymbolPath,
 };
 use powdr_ast::parsed::types::Type;
 use powdr_ast::parsed::visitor::Children;
@@ -18,9 +18,9 @@ use powdr_number::{DegreeType, FieldElement, GoldilocksField};
 
 use powdr_ast::analyzed::{
     type_from_definition, Analyzed, Expression, FunctionValueDefinition, Identity, IdentityKind,
-    PolynomialType, PublicDeclaration, StatementIdentifier, Symbol, SymbolKind
+    PolynomialType, PublicDeclaration, StatementIdentifier, Symbol, SymbolKind,
 };
-use powdr_parser::{parse, parse_module, parse_type};
+use powdr_parser::{parse_type};
 
 use crate::type_inference::{infer_types, ExpectedType};
 use crate::{side_effect_checker, AnalysisDriver};
@@ -177,10 +177,9 @@ impl PILAnalyzer {
         //         .join("\n");
         //     parse(None, &format!("namespace std::prelude;\n{missing_symbols}")).unwrap()
         // })
-        
+
         None
     }
-    
 
     /// Check that query and constr functions are used in the correct contexts.
     pub fn side_effect_check(&self) {
@@ -240,10 +239,9 @@ impl PILAnalyzer {
                         // Witness column, move its value (query function) into the expressions to be checked separately.
                         let type_scheme = type_from_definition(symbol, &None);
 
-                        let e = match value {
-                            FunctionValueDefinition::Expression(TypedExpression { e, .. }) => e,
-                            FunctionValueDefinition::Number(TypedExpression { e, .. }) => e,
-                            _ => panic!("Invalid value for query function")
+                        let FunctionValueDefinition::Expression(TypedExpression { e, .. }) = value
+                        else {
+                            panic!("Invalid value for query function")
                         };
 
                         expressions.push((e, query_type.clone().into()));

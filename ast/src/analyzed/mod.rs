@@ -77,6 +77,10 @@ impl<T> Analyzed<T> {
         self.definitions_in_source_order(PolynomialType::Committed)
     }
 
+    pub fn public_polys_in_source_order(&self) -> Vec<&(Symbol, Option<FunctionValueDefinition>)> {
+        self.definitions_in_source_order(PolynomialType::Public)
+    }
+
     pub fn intermediate_polys_in_source_order(
         &self,
     ) -> Vec<&(Symbol, Vec<AlgebraicExpression<T>>)> {
@@ -344,6 +348,7 @@ fn substitute_intermediate<T: Copy + Display>(
                     match poly.poly_id.ptype {
                         PolynomialType::Committed => {}
                         PolynomialType::Constant => {}
+                        PolynomialType::Public => {}
                         PolynomialType::Intermediate => {
                             // recursively inline intermediate polynomials, updating the cache
                             *e = inlined_expression_from_intermediate_poly_id(
@@ -387,7 +392,7 @@ fn inlined_expression_from_intermediate_poly_id<T: Copy + Display>(
         }
         r.next = r.next || poly_to_replace.next;
         match r.poly_id.ptype {
-            PolynomialType::Committed | PolynomialType::Constant => {}
+            PolynomialType::Committed | PolynomialType::Constant | PolynomialType::Public => {}
             PolynomialType::Intermediate => {
                 *e = inlined_expression_from_intermediate_poly_id(
                     r.clone(),
@@ -418,12 +423,12 @@ pub fn type_from_definition(
             FunctionValueDefinition::TypeConstructor(enum_decl, variant) => {
                 Some(variant.constructor_type(enum_decl))
             }
-            FunctionValueDefinition::Number(val) => Some(Type::Fe.into()),
         }
     } else {
         assert!(
             symbol.kind == SymbolKind::Poly(PolynomialType::Committed)
                 || symbol.kind == SymbolKind::Poly(PolynomialType::Constant)
+                || symbol.kind == SymbolKind::Poly(PolynomialType::Public),
         );
         if symbol.length.is_some() {
             Some(
@@ -516,7 +521,6 @@ pub enum FunctionValueDefinition {
     Expression(TypedExpression),
     TypeDeclaration(EnumDeclaration),
     TypeConstructor(Arc<EnumDeclaration>, EnumVariant),
-    Number(TypedExpression),
 }
 
 impl Children<Expression> for FunctionValueDefinition {
@@ -532,9 +536,6 @@ impl Children<Expression> for FunctionValueDefinition {
                 enum_declaration.children()
             }
             FunctionValueDefinition::TypeConstructor(_, variant) => variant.children(),
-            FunctionValueDefinition::Number(TypedExpression { e, type_scheme: _ }) => {
-                Box::new(iter::empty())
-            }
         }
     }
 
@@ -550,9 +551,6 @@ impl Children<Expression> for FunctionValueDefinition {
                 enum_declaration.children_mut()
             }
             FunctionValueDefinition::TypeConstructor(_, variant) => variant.children_mut(),
-            FunctionValueDefinition::Number(TypedExpression { e, type_scheme: _ }) => {
-                Box::new(iter::empty())
-            }
         }
     }
 }
@@ -1191,6 +1189,7 @@ pub enum PolynomialType {
     Committed = 0,
     Constant,
     Intermediate,
+    Public,
 }
 
 impl Display for PolynomialType {
@@ -1202,6 +1201,7 @@ impl Display for PolynomialType {
                 PolynomialType::Committed => "witness",
                 PolynomialType::Constant => "fixed",
                 PolynomialType::Intermediate => "intermediate",
+                PolynomialType::Public => "public",
             }
         )
     }

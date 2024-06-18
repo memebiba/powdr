@@ -185,8 +185,11 @@ pub struct IdentityWithoutID<Expr> {
 
 impl<Expr> IdentityWithoutID<Expr> {
     /// Constructs an Identity from a polynomial identity (expression assumed to be identical zero).
-    pub fn from_polynomial_identity(source: SourceRef, identity: Expr, attribute: Option<String>) -> Self {
-        println!("IdentityWithoutID::from_polynomial_identity");
+    pub fn from_polynomial_identity(
+        source: SourceRef,
+        identity: Expr,
+        attribute: Option<String>,
+    ) -> Self {
         Self {
             kind: IdentityKind::Polynomial,
             // TODO(md): something here to pass in the attr
@@ -395,12 +398,14 @@ impl<'a, T: FieldElement> SymbolLookup<'a, T> for Condenser<'a, T> {
         source: SourceRef,
         attribute: Option<String>,
     ) -> Result<(), EvalError> {
-        println!("Condenser::add_constraints");
         match constraints.as_ref() {
             Value::Array(items) => {
                 for item in items {
-                    self.new_constraints
-                        .push(to_constraint(item, source.clone(), attribute.clone()))
+                    self.new_constraints.push(to_constraint(
+                        item,
+                        source.clone(),
+                        attribute.clone(),
+                    ))
                 }
             }
             _ => self
@@ -435,7 +440,7 @@ fn to_constraint<T: FieldElement>(
             IdentityWithoutID::from_polynomial_identity(
                 source,
                 to_expr(&fields[0]) - to_expr(&fields[1]),
-                attribute
+                attribute,
             )
         }
         Value::Enum(kind @ "Lookup" | kind @ "Permutation", Some(fields)) => {

@@ -148,9 +148,9 @@ impl Display for InstructionBody {
 
 fn format_instruction_statement(stmt: &PilStatement) -> String {
     match stmt {
-        PilStatement::Expression(_, _,_)
-        | PilStatement::PlookupIdentity(_,_, _, _)
-        | PilStatement::PermutationIdentity(_,_, _, _)
+        PilStatement::Expression(_, _, _)
+        | PilStatement::PlookupIdentity(_, _, _, _)
+        | PilStatement::PermutationIdentity(_, _, _, _)
         | PilStatement::ConnectIdentity(_, _, _) => {
             // statements inside instruction definition don't end in semicolon
             let mut s = format!("{stmt}");
@@ -478,21 +478,27 @@ impl Display for PilStatement {
                 write_indented_by(f, format!("pol constant {name}{definition};"), 1)
             }
             // TODO(MD): display the attributes
-            PilStatement::PolynomialCommitDeclaration(_, stage, names, value, public_info) => write_indented_by(
-                f,
-                format!(
-                    "pol {} {}{}{};",
-                    public_info.map(|s| format!("public({s}) ")).unwrap_or("commit".to_owned()),
-                    stage.map(|s| format!("stage({s}) ")).unwrap_or_default(),
-                    names.iter().format(", "),
-                    value.as_ref().map(|v| format!("{v}")).unwrap_or_default()
-                ),
-                1,
-            ),
-            PilStatement::PlookupIdentity(_,_, left, right) => {
+            PilStatement::PolynomialCommitDeclaration(_, stage, names, value, is_public) => {
+                write_indented_by(
+                    f,
+                    format!(
+                        "pol {} {}{}{};",
+                        if *is_public {
+                            "public".to_owned()
+                        } else {
+                            "commit".to_owned()
+                        },
+                        stage.map(|s| format!("stage({s}) ")).unwrap_or_default(),
+                        names.iter().format(", "),
+                        value.as_ref().map(|v| format!("{v}")).unwrap_or_default()
+                    ),
+                    1,
+                )
+            }
+            PilStatement::PlookupIdentity(_, _, left, right) => {
                 write_indented_by(f, format!("{left} in {right};"), 1)
             }
-            PilStatement::PermutationIdentity(_,_, left, right) => {
+            PilStatement::PermutationIdentity(_, _, left, right) => {
                 write_indented_by(f, format!("{left} is {right};"), 1)
             }
             PilStatement::ConnectIdentity(_, left, right) => write_indented_by(
@@ -508,7 +514,7 @@ impl Display for PilStatement {
                 write_indented_by(f, format!("constant {name} = {value};"), 1)
             }
             // TODO(md): show exp
-            PilStatement::Expression(_,_, e) => write_indented_by(f, format!("{e};"), 1),
+            PilStatement::Expression(_, _, e) => write_indented_by(f, format!("{e};"), 1),
             PilStatement::EnumDeclaration(_, enum_decl) => write_indented_by(f, enum_decl, 1),
         }
     }
@@ -550,10 +556,6 @@ impl Display for FunctionDefinition {
             }
             FunctionDefinition::Expression(e) => write!(f, " = {e}"),
             FunctionDefinition::TypeDeclaration(_) => {
-                panic!("Should not use this formatting function.")
-            }
-            // TODO(md)
-            FunctionDefinition::Number(_) => {
                 panic!("Should not use this formatting function.")
             }
         }
