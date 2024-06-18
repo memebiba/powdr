@@ -552,6 +552,10 @@ impl Display for FunctionDefinition {
             FunctionDefinition::TypeDeclaration(_) => {
                 panic!("Should not use this formatting function.")
             }
+            // TODO(md)
+            FunctionDefinition::Number(_) => {
+                panic!("Should not use this formatting function.")
+            }
         }
     }
 }

@@ -222,10 +222,9 @@ impl Display for FunctionValueDefinition {
                 assert!(ts.vars.is_empty(), "Should not have called this display function, since we cannot properly format the type vars.");
                 write!(f, ": {} = {e}", ts.ty)
             }
-            // TODO: types for number???
-            FunctionValueDefinition::Number(v) => write!(f, " = {}", v),
             FunctionValueDefinition::TypeDeclaration(_)
-            | FunctionValueDefinition::TypeConstructor(_, _) => {
+            // TODO(md)
+            | FunctionValueDefinition::TypeConstructor(_, _) | FunctionValueDefinition::Number(_) => {
                 panic!("Should not use this formatting function.")
             }
         }

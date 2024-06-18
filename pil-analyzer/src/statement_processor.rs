@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, HashSet};
+use std::f32::consts::E;
 use std::iter;
 use std::sync::Arc;
 
@@ -12,7 +13,7 @@ use powdr_ast::parsed::{
     SelectedExpressions,
 };
 use powdr_ast::parsed::{FunctionKind, LambdaExpression};
-use powdr_number::DegreeType;
+use powdr_number::{BigUint, DegreeType};
 use powdr_parser_util::SourceRef;
 
 use powdr_ast::analyzed::{
@@ -121,6 +122,7 @@ where
                     None,
                     polynomials,
                     PolynomialType::Constant,
+                    None,
                 ),
             PilStatement::PolynomialConstantDefinition(source, name, definition) => self
                 .handle_symbol_definition(
@@ -131,13 +133,13 @@ where
                     Some(Type::Col.into()),
                     Some(definition),
                 ),
-            // TODO(md): could be wrong
-            PilStatement::PolynomialCommitDeclaration(source, stage, polynomials, None, None) => self
+            PilStatement::PolynomialCommitDeclaration(source, stage, polynomials, None, public_info) => self
                 .handle_polynomial_declarations(
                     source,
                     stage,
                     polynomials,
                     PolynomialType::Committed,
+                    public_info
                 ),
             PilStatement::PolynomialCommitDeclaration(
                 source,
@@ -361,7 +363,7 @@ where
             ),
             // TODO at some point, these should all be caught by the type checker.
             _ => {
-                panic!("Only identities allowed at this point.")
+                panic!("Only identities allowed at this point. {}", statement);
             }
         };
 
@@ -383,18 +385,27 @@ where
         stage: Option<u32>,
         polynomials: Vec<PolynomialName>,
         polynomial_type: PolynomialType,
+        public_info: Option<usize>
     ) -> Vec<PILItem> {
+        if public_info.is_some() {
+            assert!(polynomials.len() == 1);
+        }
         polynomials
             .into_iter()
             .flat_map(|poly_name| {
                 let (name, ty) = self.name_and_type_from_polynomial_name(poly_name);
+                let value = if let Some(idx) = public_info {
+                    Some(FunctionDefinition::Number(idx))
+                } else {
+                    None
+                };
                 self.handle_symbol_definition(
                     source.clone(),
                     name,
                     SymbolKind::Poly(polynomial_type),
                     stage,
                     ty.map(Into::into),
-                    None,
+                    value,
                 )
             })
             .collect()
@@ -467,6 +478,14 @@ where
         }
 
         let value = value.map(|v| match v {
+            FunctionDefinition::Number(idx) => {
+                let num = BigUint::from(idx);
+                let typ: Option<TypeScheme> = Some(Type::Fe.into());
+                FunctionValueDefinition::Number(TypedExpression {
+                    e: num.into(),
+                    type_scheme: typ,
+                })
+            } ,
             FunctionDefinition::Expression(expr) => {
                 if symbol_kind == SymbolKind::Poly(PolynomialType::Committed) {
                     // The only allowed value for a witness column is a query function.

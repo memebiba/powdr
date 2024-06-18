@@ -12,13 +12,13 @@ use powdr_ast::parsed::asm::{
 use powdr_ast::parsed::types::Type;
 use powdr_ast::parsed::visitor::Children;
 use powdr_ast::parsed::{
-    self, FunctionKind, LambdaExpression, PILFile, PilStatement, SymbolCategory,
+    self, FunctionKind, LambdaExpression, PILFile, PilStatement, SymbolCategory, TypedExpression,
 };
 use powdr_number::{DegreeType, FieldElement, GoldilocksField};
 
 use powdr_ast::analyzed::{
     type_from_definition, Analyzed, Expression, FunctionValueDefinition, Identity, IdentityKind,
-    PolynomialType, PublicDeclaration, StatementIdentifier, Symbol, SymbolKind, TypedExpression,
+    PolynomialType, PublicDeclaration, StatementIdentifier, Symbol, SymbolKind
 };
 use powdr_parser::{parse, parse_module, parse_type};
 
@@ -240,9 +240,10 @@ impl PILAnalyzer {
                         // Witness column, move its value (query function) into the expressions to be checked separately.
                         let type_scheme = type_from_definition(symbol, &None);
 
-                        let FunctionValueDefinition::Expression(TypedExpression { e, .. }) = value
-                        else {
-                            panic!("Invalid value for query function")
+                        let e = match value {
+                            FunctionValueDefinition::Expression(TypedExpression { e, .. }) => e,
+                            FunctionValueDefinition::Number(TypedExpression { e, .. }) => e,
+                            _ => panic!("Invalid value for query function")
                         };
 
                         expressions.push((e, query_type.clone().into()));

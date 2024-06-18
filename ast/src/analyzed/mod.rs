@@ -418,7 +418,7 @@ pub fn type_from_definition(
             FunctionValueDefinition::TypeConstructor(enum_decl, variant) => {
                 Some(variant.constructor_type(enum_decl))
             }
-            FunctionValueDefinition::Number(_) => Some(Type::Int.into()),
+            FunctionValueDefinition::Number(val) => Some(Type::Fe.into()),
         }
     } else {
         assert!(
@@ -516,7 +516,7 @@ pub enum FunctionValueDefinition {
     Expression(TypedExpression),
     TypeDeclaration(EnumDeclaration),
     TypeConstructor(Arc<EnumDeclaration>, EnumVariant),
-    Number(usize),
+    Number(TypedExpression),
 }
 
 impl Children<Expression> for FunctionValueDefinition {
@@ -532,7 +532,9 @@ impl Children<Expression> for FunctionValueDefinition {
                 enum_declaration.children()
             }
             FunctionValueDefinition::TypeConstructor(_, variant) => variant.children(),
-            FunctionValueDefinition::Number(_) => Box::new(iter::empty()),
+            FunctionValueDefinition::Number(TypedExpression { e, type_scheme: _ }) => {
+                Box::new(iter::empty())
+            }
         }
     }
 
@@ -548,7 +550,9 @@ impl Children<Expression> for FunctionValueDefinition {
                 enum_declaration.children_mut()
             }
             FunctionValueDefinition::TypeConstructor(_, variant) => variant.children_mut(),
-            FunctionValueDefinition::Number(_) => Box::new(iter::empty()),
+            FunctionValueDefinition::Number(TypedExpression { e, type_scheme: _ }) => {
+                Box::new(iter::empty())
+            }
         }
     }
 }
