@@ -151,7 +151,7 @@ fn format_instruction_statement(stmt: &PilStatement) -> String {
         PilStatement::Expression(_, _, _)
         | PilStatement::PlookupIdentity(_, _, _, _)
         | PilStatement::PermutationIdentity(_, _, _, _)
-        | PilStatement::ConnectIdentity(_, _, _) => {
+        | PilStatement::ConnectIdentity(_, _, _, _) => {
             // statements inside instruction definition don't end in semicolon
             let mut s = format!("{stmt}");
             assert_eq!(s.pop(), Some(';'));
@@ -501,7 +501,7 @@ impl Display for PilStatement {
             PilStatement::PermutationIdentity(_, _, left, right) => {
                 write_indented_by(f, format!("{left} is {right};"), 1)
             }
-            PilStatement::ConnectIdentity(_, left, right) => write_indented_by(
+            PilStatement::ConnectIdentity(_, _, left, right) => write_indented_by(
                 f,
                 format!(
                     "{{ {} }} connect {{ {} }};",

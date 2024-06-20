@@ -102,7 +102,7 @@ pub enum PilStatement {
         SelectedExpressions<Expression>,
         SelectedExpressions<Expression>,
     ),
-    ConnectIdentity(SourceRef, Vec<Expression>, Vec<Expression>),
+    ConnectIdentity(SourceRef, Option<String>, Vec<Expression>, Vec<Expression>),
     ConstantDefinition(SourceRef, String, Expression),
     EnumDeclaration(SourceRef, EnumDeclaration<Expression>),
     Expression(SourceRef, Option<String>, Expression),
@@ -153,7 +153,7 @@ impl PilStatement {
             | PilStatement::Namespace(_, _, _)
             | PilStatement::PlookupIdentity(_, _, _, _)
             | PilStatement::PermutationIdentity(_, _, _, _)
-            | PilStatement::ConnectIdentity(_, _, _)
+            | PilStatement::ConnectIdentity(_, _, _, _)
             | PilStatement::Expression(_, _, _) => Box::new(empty()),
         }
     }
@@ -167,7 +167,7 @@ impl Children<Expression> for PilStatement {
             | PilStatement::PermutationIdentity(_, _, left, right) => {
                 Box::new(left.children().chain(right.children()))
             }
-            PilStatement::ConnectIdentity(_start, left, right) => {
+            PilStatement::ConnectIdentity(_start,_, left, right) => {
                 Box::new(left.iter().chain(right.iter()))
             }
             PilStatement::Expression(_, _, e)
@@ -202,7 +202,7 @@ impl Children<Expression> for PilStatement {
             | PilStatement::PermutationIdentity(_, _, left, right) => {
                 Box::new(left.children_mut().chain(right.children_mut()))
             }
-            PilStatement::ConnectIdentity(_start, left, right) => {
+            PilStatement::ConnectIdentity(_start, _, left, right) => {
                 Box::new(left.iter_mut().chain(right.iter_mut()))
             }
             PilStatement::Expression(_, _, e)

@@ -352,9 +352,9 @@ where
                 self.expression_processor(&Default::default())
                     .process_selected_expressions(right),
             ),
-            PilStatement::ConnectIdentity(source, left, right) => (
+            PilStatement::ConnectIdentity(source, attr, left, right) => (
                 source,
-                None,
+                attr,
                 IdentityKind::Connect,
                 SelectedExpressions {
                     selector: None,
@@ -374,8 +374,6 @@ where
                 panic!("Only identities allowed at this point. {}", statement);
             }
         };
-
-        println!("ATTR IN STATEMENT PROCESSOR {attribute:?}");
 
         vec![PILItem::Identity(Identity {
             id: self.counters.dispense_identity_id(),
