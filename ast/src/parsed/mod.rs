@@ -167,7 +167,7 @@ impl Children<Expression> for PilStatement {
             | PilStatement::PermutationIdentity(_, _, left, right) => {
                 Box::new(left.children().chain(right.children()))
             }
-            PilStatement::ConnectIdentity(_start,_, left, right) => {
+            PilStatement::ConnectIdentity(_start, _, left, right) => {
                 Box::new(left.iter().chain(right.iter()))
             }
             PilStatement::Expression(_, _, e)
