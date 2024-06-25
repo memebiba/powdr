@@ -6,9 +6,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use itertools::Itertools;
-use powdr_ast::parsed::asm::{
-    parse_absolute_path, AbsoluteSymbolPath, SymbolPath,
-};
+use powdr_ast::parsed::asm::{parse_absolute_path, AbsoluteSymbolPath, SymbolPath};
 use powdr_ast::parsed::types::Type;
 use powdr_ast::parsed::visitor::Children;
 use powdr_ast::parsed::{
@@ -20,7 +18,7 @@ use powdr_ast::analyzed::{
     type_from_definition, Analyzed, Expression, FunctionValueDefinition, Identity, IdentityKind,
     PolynomialType, PublicDeclaration, StatementIdentifier, Symbol, SymbolKind,
 };
-use powdr_parser::{parse_type};
+use powdr_parser::parse_type;
 
 use crate::type_inference::{infer_types, ExpectedType};
 use crate::{side_effect_checker, AnalysisDriver};

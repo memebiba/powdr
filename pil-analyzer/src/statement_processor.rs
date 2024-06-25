@@ -352,9 +352,9 @@ where
                 self.expression_processor(&Default::default())
                     .process_selected_expressions(right),
             ),
-            PilStatement::ConnectIdentity(source, left, right) => (
+            PilStatement::ConnectIdentity(source, attr, left, right) => (
                 source,
-                None,
+                attr,
                 IdentityKind::Connect,
                 SelectedExpressions {
                     selector: None,
