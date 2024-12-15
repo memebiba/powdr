@@ -1,6 +1,5 @@
-# adapted from https://github.com/rust-lang/mdBook/wiki/Automated-Deployment%3A-GitHub-Actions#GitHub-Pages-Deploy
-
 name: Deploy book
+
 on:
   push:
     branches:
@@ -10,34 +9,57 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # To push a branch 
-      pull-requests: write  # To create a PR from that branch
+      contents: write  # Allow pushing to the repository
+      pull-requests: write  # Allow creating a PR from that branch
+
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # Fetch all history for proper versioning
+
     - name: Install latest mdbook
       run: |
-        tag=$(curl 'https://api.github.com/repos/rust-lang/mdbook/releases/latest' | jq -r '.tag_name')
+        # Fetch the latest mdbook release tag
+        tag=$(curl -s 'https://api.github.com/repos/rust-lang/mdbook/releases/latest' | jq -r '.tag_name')
+        
+        # Build the download URL for the latest release
         url="https://github.com/rust-lang/mdbook/releases/download/${tag}/mdbook-${tag}-x86_64-unknown-linux-gnu.tar.gz"
+        
+        # Create directory and download mdbook
         mkdir mdbook
         curl -sSL $url | tar -xz --directory=./mdbook
-        echo `pwd`/mdbook >> $GITHUB_PATH
+        
+        # Add mdbook binary to PATH
+        echo "$PWD/mdbook" >> $GITHUB_PATH
+
     - name: Deploy GitHub Pages
       run: |
-        # generate cli docs and inject them into the book
+        # Generate CLI documentation and inject into the book
         cargo run --package powdr_cli -- --markdown-help > book/src/cli/README.md
-        # build the book
+        
+        # Build the mdBook project
         cd book
         mdbook build
+        
+        # Set up Git worktree for gh-pages branch
         git worktree add gh-pages
+        
+        # Configure git user (using a generic email for CI)
         git config user.name "Deploy from CI"
-        git config user.email ""
+        git config user.email "actions@github.com"
+        
+        # Switch to gh-pages branch
         cd gh-pages
-        # Delete the ref to avoid keeping history.
+        
+        # Clean the gh-pages branch (avoid keeping old files)
         git update-ref -d refs/heads/gh-pages
         rm -rf *
+        
+        # Move the built book contents into the gh-pages branch
         mv ../book/* .
+        
+        # Commit and push the changes to GitHub Pages
         git add .
         git commit -m "Deploy $GITHUB_SHA to gh-pages"
         git push --force --set-upstream origin gh-pages
